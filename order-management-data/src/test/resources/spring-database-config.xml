@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+		https://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/tx
+		https://www.springframework.org/schema/tx/spring-tx.xsd
+		http://www.springframework.org/schema/context
+		https://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/aop
+		https://www.springframework.org/schema/aop/spring-aop.xsd
+		http://www.springframework.org/schema/jdbc
+		http://www.springframework.org/schema/jdbc/spring-jdbc.xsd">
+
+    <bean id="configBean" class="org.springframework.context.support.PropertySourcesPlaceholderConfigurer">
+        <property name="location" value="classpath:db-connection.properties"/>
+    </bean>
+
+    <!--Data Source-->
+    <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+        <property name="driverClassName" value="${connection.driver}"/>
+        <property name="url" value="${connection.url}"/>
+
+        <property name="username" value="${connection.username}"/>
+        <property name="password" value="123456"/>
+        <!--        <property name="password" value="${connection.password}"/>-->
+        <!--        <property name="connectionProperties"-->
+        <!--                  value="config.decrypt=true;-->
+        <!--                  config.decrypt.key=${connection.publicKey}"/>-->
+
+        <property name="initialSize" value="${connection.pool.initialSize}"/>
+        <property name="maxActive" value="${connection.pool.maxActive}"/>
+        <property name="minIdle" value="${connection.pool.minIdle}"/>
+        <property name="maxWait" value="${connection.pool.maxWait}"/>
+
+        <!--<property name="poolPreparedStatements" value="${connection.pool.PreparedStatements}" />-->
+        <!--<property name="maxPoolPreparedStatementPerConnectionSize" value="${connection.pool.maxPoolPreparedStatementPerConnectionSize}" /> -->
+
+        <property name="validationQuery" value="${connection.pool.validationQuery}"/>
+        <property name="testWhileIdle" value="${connection.pool.testWhileIdle}"/>
+        <property name="testOnBorrow" value="${connection.pool.testOnBorrow}"/>
+        <property name="testOnReturn" value="${connection.pool.testOnReturn}"/>
+        <property name="timeBetweenEvictionRunsMillis" value="${connection.pool.timeBetweenEvictionRunsMillis}"/>
+        <property name="minEvictableIdleTimeMillis" value="${connection.pool.minEvictableIdleTimeMillis}"/>
+
+        <property name="removeAbandoned" value="${connection.pool.removeAbandoned}"/>
+        <property name="removeAbandonedTimeout" value="${connection.pool.removeAbandonedTimeout}"/>
+        <property name="logAbandoned" value="${connection.pool.logAbandoned}"/>
+        <property name="filters" value="${connection.pool.filter}"/>
+    </bean>
+
+    <jdbc:initialize-database data-source="dataSource">
+        <jdbc:script location="classpath:db-schema.sql"/>
+    </jdbc:initialize-database>
+
+
+    <!--SQL Session-->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="configLocation" value="classpath:mybatis-config.xml"/>
+        <property name="mapperLocations"
+                  value="classpath:org/neptrueworks/ordermanagement/data/mapping/*Mappable.xml"/>
+    </bean>
+
+    <bean id="sqlSession" class="org.mybatis.spring.SqlSessionTemplate">
+        <constructor-arg ref="sqlSessionFactory"/>
+    </bean>
+
+    <!--Mapper-->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="org.neptrueworks.ordermanagement.data.mapping"/>
+        <property name="markerInterface" value="org.neptrueworks.ordermanagement.data.maneuvering.IDataMappable"/>
+        <property name="sqlSessionTemplateBeanName" value="sqlSession"/>
+    </bean>
+
+    <!--Transaction-->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <constructor-arg ref="dataSource"/>
+    </bean>
+
+    <tx:advice id="transactionAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="fetch*" read-only="true"/>
+            <tx:method name="select*" read-only="true"/>
+            <tx:method name="get*" read-only="true"/>
+            <tx:method name="*" propagation="REQUIRED"/>
+        </tx:attributes>
+    </tx:advice>
+
+    <aop:config>
+        <aop:pointcut id="transactionPointCut"
+                      expression="execution(* org.neptrueworks.ordermanagement.data.maneuvering.IDataMappable+.*(..))"/>
+        <aop:advisor advice-ref="transactionAdvice" pointcut-ref="transactionPointCut"/>
+    </aop:config>
+
+</beans>

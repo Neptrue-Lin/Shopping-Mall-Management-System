@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration status="WARN" monitorInterval="30">
+    <appenders>
+        <console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%highlight{[%date{HH:mm:ss.SSS}] [%-4level | %logger] %message%n%xEx}"/>
+        </console>
+
+        <RollingRandomAccessFile  name="RollingFile" fileName="logs/latest.log"
+                     filePattern="classpath:logs/$${date:yyyy-MM}/%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="%highlight{[%date{HH:mm:ss.SSSS}] [%-4level | THREAD %threadId] %message%n%xEx}"/>
+            <Policies>
+                <OnStartupTriggeringPolicy />
+                <TimeBasedTriggeringPolicy />
+                <SizeBasedTriggeringPolicy size="25 MB"/>
+            </Policies>
+        </RollingRandomAccessFile>
+    </appenders>
+
+    <loggers>
+        <logger name="org.springframework" level="INFO"/>
+        <logger name="org.mybatis" level="INFO"/>
+        <root level="all">
+            <appender-ref ref="Console"/>
+            <appender-ref ref="RollingFile"/>
+        </root>
+    </loggers>
+</configuration>

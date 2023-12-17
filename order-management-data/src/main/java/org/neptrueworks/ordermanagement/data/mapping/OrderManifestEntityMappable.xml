@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.neptrueworks.ordermanagement.data.mapping.OrderManifestEntityMappable">
+    <insert id="add" parameterType="OrderManifestEntity" useGeneratedKeys="true" keyColumn="id">
+        INSERT INTO order_manifest
+        (`order_manifest`.`created_by`,
+         `order_manifest`.`last_modified_by`)
+        VALUES (#{createdBy},
+                #{createdBy});
+    </insert>
+
+    <delete id="deleteScalar" parameterType="int">
+        DELETE
+        FROM `order_manifest`
+        WHERE `order_manifest`.`id` = #{id};
+    </delete>
+
+    <update id="removeScalar" parameterType="int">
+        UPDATE `order_manifest`
+        SET `order_manifest`.`is_deleted` = 1,
+            `order_manifest`.`last_modified_by` = #{lastModifiedBy}
+        WHERE `order_manifest`.`id` = #{id};
+    </update>
+
+    <update id="resumeScalar" parameterType="int">
+        UPDATE `order_manifest`
+        SET `order_manifest`.`is_deleted` = 0,
+            `order_manifest`.`last_modified_by` = #{lastModifiedBy}
+        WHERE `order_manifest`.`id` = #{id};
+    </update>
+
+    <update id="updateGrossAmount" parameterType="OrderManifestEntity">
+        UPDATE `order_manifest`
+        SET `order_manifest`.`gross_amount` = #{grossAmount},
+            `order_manifest`.`last_modified_by` = #{lastModifiedBy}
+        WHERE `order_manifest`.`id` = #{id};
+    </update>
+
+    <select id="fetchScalar" parameterType="int" resultType="OrderManifestEntity">
+        SELECT `order_manifest`.`id`,
+               `order_manifest`.`gross_amount`,
+               `order_manifest`.`paid_at`,
+               `order_manifest`.`created_at`,
+               `order_manifest`.`created_by`,
+               `order_manifest`.`last_modified_at`,
+               `order_manifest`.`last_modified_by`,
+               `order_manifest`.`is_deleted`
+        FROM `order_manifest`
+        WHERE `order_manifest`.`id` = #{id};
+    </select>
+
+    <select id="fetchAll" resultType="OrderManifestEntity">
+        SELECT `order_manifest`.`id`,
+               `order_manifest`.`gross_amount`,
+               `order_manifest`.`paid_at`,
+               `order_manifest`.`created_at`,
+               `order_manifest`.`created_by`,
+               `order_manifest`.`last_modified_at`,
+               `order_manifest`.`last_modified_by`,
+               `order_manifest`.`is_deleted`
+        FROM `order_manifest`;
+    </select>
+
+    <select id="fetch" parameterType="map" resultType="OrderManifestEntity">
+        SELECT `order_manifest`.`id`,
+               `order_manifest`.`gross_amount`,
+               `order_manifest`.`paid_at`,
+               `order_manifest`.`created_at`,
+               `order_manifest`.`created_by`,
+               `order_manifest`.`last_modified_at`,
+               `order_manifest`.`last_modified_by`,
+               `order_manifest`.`is_deleted`
+        FROM `order_manifest`
+        WHERE `order_manifest`.`id` = #{id};
+    </select>
+
+    <select id="limitOffset" resultType="OrderManifestEntity">
+        SELECT `order_manifest`.`id`,
+               `order_manifest`.`gross_amount`,
+               `order_manifest`.`paid_at`,
+               `order_manifest`.`created_at`,
+               `order_manifest`.`created_by`,
+               `order_manifest`.`last_modified_at`,
+               `order_manifest`.`last_modified_by`,
+               `order_manifest`.`is_deleted`
+        FROM `order_manifest`
+        LIMIT #{count} OFFSET #{offset};
+    </select>
+
+    <select id="countScalar" parameterType="int" resultType="int">
+        SELECT COUNT(1)
+        FROM `order_manifest`
+        WHERE `order_manifest`.`id` = #{id};
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT COUNT(1)
+        FROM `order_manifest`;
+    </select>
+</mapper>

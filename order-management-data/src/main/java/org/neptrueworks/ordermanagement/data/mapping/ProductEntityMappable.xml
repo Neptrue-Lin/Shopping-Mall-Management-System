@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.neptrueworks.ordermanagement.data.mapping.ProductEntityMappable">
+    <insert id="add" parameterType="ProductEntity" useGeneratedKeys="true" keyColumn="id">
+        INSERT INTO `product`
+        (`product`.`name`,
+         `product`.`price`,
+         `product`.`stock`,
+         `product`.`created_by`,
+         `product`.`last_modified_by`)
+        VALUES (#{name},
+                #{price},
+                #{stock},
+                #{createdBy},
+                #{createdBy});
+    </insert>
+
+    <delete id="deleteScalar" parameterType="int">
+        DELETE
+        FROM `product`
+        WHERE `product`.`id` = #{id};
+    </delete>
+
+    <update id="removeScalar" parameterType="int">
+        UPDATE `product`
+        SET `product`.`is_deleted` = 1,
+            `product`.last_modified_by = #{lastModifiedBy}
+        WHERE `product`.`id` = #{id};
+    </update>
+
+    <update id="resumeScalar" parameterType="int">
+        UPDATE `product`
+        SET `product`.`is_deleted` = 0,
+            `product`.last_modified_by = #{lastModifiedBy}
+        WHERE `product`.`id` = #{id};
+    </update>
+
+    <update id="updateStock" parameterType="ProductEntity">
+        UPDATE `product`
+        SET `product`.`stock` = #{stock},
+            `product`.last_modified_by = #{lastModifiedBy}
+        WHERE `product`.`id` = #{id};
+    </update>
+
+    <select id="fetchScalar" parameterType="int" resultType="ProductEntity">
+        SELECT `product`.`id`,
+               `product`.`name`,
+               `product`.`price`,
+               `product`.`stock`,
+               `product`.`created_at`,
+               `product`.`created_by`,
+               `product`.`last_modified_at`,
+               `product`.`last_modified_by`,
+               `product`.`is_deleted`
+        FROM `product`
+        WHERE `product`.`id` = #{id};
+    </select>
+
+    <select id="fetchAll" resultType="ProductEntity">
+        SELECT `product`.`id`,
+               `product`.`name`,
+               `product`.`price`,
+               `product`.`stock`,
+               `product`.`created_at`,
+               `product`.`created_by`,
+               `product`.`last_modified_at`,
+               `product`.`last_modified_by`,
+               `product`.`is_deleted`
+        FROM `product`
+    </select>
+
+    <select id="fetch" parameterType="map" resultType="ProductEntity">
+        SELECT `product`.`id`,
+               `product`.`name`,
+               `product`.`price`,
+               `product`.`stock`,
+               `product`.`created_at`,
+               `product`.`created_by`,
+               `product`.`last_modified_at`,
+               `product`.`last_modified_by`,
+               `product`.`is_deleted`
+        FROM `product`
+        WHERE `product`.`id` = #{id};
+    </select>
+
+    <select id="limit" resultType="ProductEntity">
+        SELECT `product`.`id`,
+               `product`.`name`,
+               `product`.`price`,
+               `product`.`stock`,
+               `product`.`created_at`,
+               `product`.`created_by`,
+               `product`.`last_modified_at`,
+               `product`.`last_modified_by`,
+               `product`.`is_deleted`
+        FROM `product`
+        LIMIT #{count} OFFSET #{offset};
+    </select>
+
+    <select id="countScalar" parameterType="int" resultType="int">
+        SELECT COUNT(1)
+        FROM `product`
+        WHERE `product`.`id` = #{id};
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT COUNT(1)
+        FROM `product`;
+    </select>
+</mapper>

@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.neptrueworks.ordermanagement.data.mapping.OrderItemEntityMappable">
+    <insert id="add" parameterType="OrderItemEntity" useGeneratedKeys="true" keyColumn="id">
+        INSERT INTO `order_item`
+        (`order_item`.`product_id`,
+         `order_item`.`quantity`,
+         `order_item`.`order_manifest_id`,
+         `order_item`.`created_by`,
+         `order_item`.`last_modified_by`)
+        VALUES (#{productId},
+                #{quantity},
+                #{orderManifestId},
+                #{createdBy},
+                #{lastModifiedBy});
+    </insert>
+
+    <delete id="deleteScalar" parameterType="int">
+        DELETE
+        FROM `order_item`
+        WHERE `order_item`.`id` = #{id};
+    </delete>
+
+    <update id="removeScalar" parameterType="int">
+        UPDATE `order_item`
+        SET `order_item`.`is_deleted` = 1,
+            `order_item`.`last_modified_by` = #{lastModifiedBy}
+        WHERE `order_item`.`id` = #{id};
+    </update>
+
+    <update id="resumeScalar" parameterType="int">
+        UPDATE `order_item`
+        SET `order_item`.`is_deleted` = 0,
+            `order_item`.`last_modified_by` = #{lastModifiedBy}
+        WHERE `order_item`.`id` = #{id};
+    </update>
+
+    <select id="fetchScalar" parameterType="int" resultType="OrderItemEntity">
+        SELECT `order_item`.`id`,
+               `order_item`.`product_id`,
+               `order_item`.`quantity`,
+               `order_item`.`order_manifest_id`,
+               `order_item`.`created_at`,
+               `order_item`.`created_by`,
+               `order_item`.`last_modified_at`,
+               `order_item`.`last_modified_by`,
+               `order_item`.`is_deleted`
+        FROM `order_item`
+        WHERE `order_item`.`id` = #{id};
+    </select>
+
+    <select id="fetchAll" resultType="OrderItemEntity">
+        SELECT `order_item`.`id`,
+               `order_item`.`product_id`,
+               `order_item`.`quantity`,
+               `order_item`.`order_manifest_id`,
+               `order_item`.`created_at`,
+               `order_item`.`created_by`,
+               `order_item`.`last_modified_at`,
+               `order_item`.`last_modified_by`,
+               `order_item`.`is_deleted`
+        FROM `order_item`;
+    </select>
+
+    <select id="fetchManifestItems" parameterType="int" resultType="OrderItemEntity">
+        SELECT `order_item`.`id`,
+               `order_item`.`product_id`,
+               `order_item`.`quantity`,
+               `order_item`.`order_manifest_id`,
+               `order_item`.`created_at`,
+               `order_item`.`created_by`,
+               `order_item`.`last_modified_at`,
+               `order_item`.`last_modified_by`,
+               `order_item`.`is_deleted`
+        FROM `order_item`
+        WHERE `order_item`.`order_manifest_id` = #{manifestId};
+    </select>
+
+    <select id="limit" resultType="OrderItemEntity">
+        SELECT `order_item`.`id`,
+               `order_item`.`product_id`,
+               `order_item`.`quantity`,
+               `order_item`.`order_manifest_id`,
+               `order_item`.`created_at`,
+               `order_item`.`created_by`,
+               `order_item`.`last_modified_at`,
+               `order_item`.`last_modified_by`,
+               `order_item`.`is_deleted`
+        FROM `order_item`
+        LIMIT #{count} OFFSET #{offset};
+    </select>
+
+    <select id="countScalar" parameterType="int" resultType="int">
+        SELECT COUNT(1)
+        FROM `order_item`
+        WHERE `order_item`.`id` = #{id};
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT COUNT(1)
+        FROM `order_item`;
+    </select>
+</mapper>
