@@ -1,10 +1,13 @@
 package org.neptrueworks.ordermanagement.core.servicing;
 
+import lombok.SneakyThrows;
+import org.neptrueworks.ordermanagement.common.exceptions.ExceptionCashier;
+import org.neptrueworks.ordermanagement.core.exceptions.ServiceExceptionIssue;
 import org.neptrueworks.ordermanagement.data.entitizing.ProductEntity;
 import org.neptrueworks.ordermanagement.data.mapping.ProductEntityMappable;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.util.Optional;
 
 @Service
 
@@ -16,63 +19,78 @@ public class ProductService implements ProductServiceable {
     }
 
     @Override
+    public Iterable<ProductEntity> getAllProduct() {
+        return this.productMapper.fetchAll();
+    }
+
+    @Override
+    public Iterable<ProductEntity> getPagedProducts(int pageIndex, int pageSize) {
+        int offset = pageSize * (pageIndex - 1);
+        return this.productMapper.take(offset, pageSize);
+    }
+
+    @Override
+    public long countAllProducts() {
+        return this.productMapper.countAll();
+    }
+
+    @Override
+    @SneakyThrows
+    public ProductEntity identifyProduct(int id) {
+        Optional<ProductEntity> product = this.productMapper.fetchScalar(id);
+        if (product.isEmpty())
+            throw ExceptionCashier.DEFAULT.checkout(ServiceExceptionIssue.PRODUCT_NONEXISTENT);
+        return product.get();
+    }
+
+    @Override
     public void addProduct(ProductEntity product) {
         this.productMapper.add(product);
     }
 
     @Override
-    public void removeProduct(ProductEntity entity) {
-        if(entity.isDeleted()) {
+    public void removeProduct(int productId) {
+        ProductEntity product = this.identifyProduct(productId);
+        if (product.isDeleted())
             return;
-        }
-        this.productMapper.removeScalar(entity.getId());
+
+        this.productMapper.removeScalar(product.getId());
     }
 
     @Override
-    public void resumeProduct(ProductEntity entity) {
-        if(!entity.isDeleted()) {
+    public void resumeProduct(int productId) {
+        ProductEntity product = this.identifyProduct(productId);
+        if (!product.isDeleted())
             return;
-        }
-        this.productMapper.resumeScalar(entity.getId());
+        this.productMapper.resumeScalar(product.getId());
     }
 
     @Override
-    public List<ProductEntity> getAllProduct() {
-        return this.productMapper.fetchAll();
-    }
+    @SneakyThrows
+    public void restock(int id, int increment) {
+        ProductEntity entity = this.identifyProduct(id);
+        if (increment == 0)
+            return;
+        else if (increment < 0)
+            throw ExceptionCashier.DEFAULT.checkout(ServiceExceptionIssue.VARIATION_LESS_THAN_ZERO);
+        else if (entity.getStock() < 0)
+            throw ExceptionCashier.DEFAULT.checkout(ServiceExceptionIssue.OUT_OF_STOCK);
 
-    @Override
-    public List<ProductEntity> getLimitedProducts(int pageIndex, int pageSize) {
-        int offset = pageSize * (pageIndex - 1);
-        return this.productMapper.limitOffset(offset, pageSize);
-    }
-
-    @Override
-    public int countAllProducts() {
-        return this.productMapper.countAll();
-    }
-
-    @Override
-    public ProductEntity identifyProduct(int id) {
-        return this.productMapper.fetchScalar(id);
-    }
-
-    @Override
-    public void restock(ProductEntity entity, int increment) {
-        entity.setStock(this.productMapper.fetchScalar(entity.getId()).getStock());
-        if (increment < 0 || entity.getStock() < 0) {
-            throw new IllegalArgumentException();
-        }
         entity.setStock(entity.getStock() + increment);
         this.productMapper.updateStock(entity);
     }
 
     @Override
-    public void destock(ProductEntity entity, int decrement) {
-        entity.setStock(this.productMapper.fetchScalar(entity.getId()).getStock());
-        if (decrement < 0 || entity.getStock() - decrement < 0) {
-            throw new IllegalArgumentException();
-        }
+    @SneakyThrows
+    public void destock(int id, int decrement) {
+        ProductEntity entity = this.identifyProduct(id);
+        if (decrement == 0)
+            return;
+        else if (decrement < 0)
+            throw ExceptionCashier.DEFAULT.checkout(ServiceExceptionIssue.VARIATION_LESS_THAN_ZERO);
+        else if (entity.getStock() - decrement < 0)
+            throw ExceptionCashier.DEFAULT.checkout(ServiceExceptionIssue.OUT_OF_STOCK);
+
         entity.setStock(entity.getStock() - decrement);
         this.productMapper.updateStock(entity);
     }

@@ -21,8 +21,14 @@ public class ProductEntity implements IDataAuditingEntitizable<Integer> {
     private String lastModifiedBy = "TEST";
     private boolean isDeleted = false;
 
+    @SneakyThrows
     @Override
-    public <TEntity extends IDataEntitizable<Integer>> boolean isIsotropic(TEntity entity) {
+    public ProductEntity duplicate() {
+        return (ProductEntity) this.clone();
+    }
+
+    @Override
+    public boolean isIsotropic(IDataEntitizable<Integer> entity) {
         if (entity == this) {
             return true;
         }

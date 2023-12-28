@@ -3,13 +3,135 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.neptrueworks.ordermanagement.data.mapping.OrderItemEntityMappable">
-    <insert id="add" parameterType="OrderItemEntity" useGeneratedKeys="true" keyColumn="id">
+    <select id="findManifestItems" parameterType="int" resultType="OrderItemEntity">
+        SELECT `id`,
+               `product_id`,
+               `quantity`,
+               `order_manifest_id`,
+               `created_at`,
+               `created_by`,
+               `last_modified_at`,
+               `last_modified_by`,
+               `is_deleted`
+        FROM `order_item`
+        WHERE `order_manifest_id` = #{manifestId};
+    </select>
+
+    <select id="sortManifestItems" resultType="OrderItemEntity">
+        SELECT `id`,
+        `product_id`,
+        `quantity`,
+        `order_manifest_id`,
+        `created_at`,
+        `created_by`,
+        `last_modified_at`,
+        `last_modified_by`,
+        `is_deleted`
+        FROM `order_item`
+        WHERE `order_manifest_id` = #{manifestId}
+        ORDER BY #{level.sortBy}
+        <if test="level.orientation == DataSortOrientation.ASCENDING"> ASC;</if>
+        <if test="level.orientation == DataSortOrientation.DESCENDING"> DESC;</if>
+    </select>
+
+    <select id="findItemByProductId" resultType="OrderItemEntity">
+        SELECT `id`,
+               `product_id`,
+               `quantity`,
+               `order_manifest_id`,
+               `created_at`,
+               `created_by`,
+               `last_modified_at`,
+               `last_modified_by`,
+               `is_deleted`
+        FROM `order_item`
+        WHERE `order_manifest_id` = #{manifestId}
+          AND `product_id` = #{productId};
+    </select>
+
+    <select id="lookupItemsByProductId" resultType="OrderItemEntity">
+        SELECT `id`,
+               `product_id`,
+               `quantity`,
+               `order_manifest_id`,
+               `created_at`,
+               `created_by`,
+               `last_modified_at`,
+               `last_modified_by`,
+               `is_deleted`
+        FROM `order_item`
+        <where>
+            `product_id` = #{productId} AND #{keyset.key}
+            <if test="keyset.orientation == DataSeekOrientation.FORWARD"> &lt; </if>
+            <if test="keyset.orientation == DataSeekOrientation.BACKWARD"> &gt; </if>
+            #{keyset.value}
+        </where>
+        ORDER BY #{level.sortBy}
+        <if test="level.orientation == DataSortOrientation.ASCENDING"> ASC;</if>
+        <if test="level.orientation == DataSortOrientation.DESCENDING"> DESC;</if>
+    </select>
+
+
+
+    <select id="fetchScalar" parameterType="int" resultType="OrderItemEntity">
+        SELECT `id`,
+               `product_id`,
+               `quantity`,
+               `order_manifest_id`,
+               `created_at`,
+               `created_by`,
+               `last_modified_at`,
+               `last_modified_by`,
+               `is_deleted`
+        FROM `order_item`
+        WHERE `id` = #{id};
+    </select>
+
+    <select id="fetchAll" resultType="OrderItemEntity">
+        SELECT `id`,
+               `product_id`,
+               `quantity`,
+               `order_manifest_id`,
+               `created_at`,
+               `created_by`,
+               `last_modified_at`,
+               `last_modified_by`,
+               `is_deleted`
+        FROM `order_item`;
+    </select>
+
+    <select id="take" resultType="OrderItemEntity">
+        SELECT `id`,
+               `product_id`,
+               `quantity`,
+               `order_manifest_id`,
+               `created_at`,
+               `created_by`,
+               `last_modified_at`,
+               `last_modified_by`,
+               `is_deleted`
+        FROM `order_item`
+        LIMIT #{count} OFFSET #{offset};
+    </select>
+
+    <select id="countScalar" parameterType="int" resultType="int">
+        SELECT COUNT(1)
+        FROM `order_item`
+        WHERE `id` = #{id};
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT COUNT(1)
+        FROM `order_item`;
+    </select>
+
+    <insert id="add" parameterType="OrderItemEntity" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO `order_item`
-        (`order_item`.`product_id`,
-         `order_item`.`quantity`,
-         `order_item`.`order_manifest_id`,
-         `order_item`.`created_by`,
-         `order_item`.`last_modified_by`)
+        (`product_id`,
+         `quantity`,
+         `order_manifest_id`,
+         `created_by`,
+         `last_modified_by`)
         VALUES (#{productId},
                 #{quantity},
                 #{orderManifestId},
@@ -20,86 +142,20 @@
     <delete id="deleteScalar" parameterType="int">
         DELETE
         FROM `order_item`
-        WHERE `order_item`.`id` = #{id};
+        WHERE `id` = #{id};
     </delete>
 
     <update id="removeScalar" parameterType="int">
         UPDATE `order_item`
-        SET `order_item`.`is_deleted` = 1,
-            `order_item`.`last_modified_by` = #{lastModifiedBy}
-        WHERE `order_item`.`id` = #{id};
+        SET `is_deleted`       = 1,
+            `last_modified_by` = #{lastModifiedBy}
+        WHERE `id` = #{id};
     </update>
 
     <update id="resumeScalar" parameterType="int">
         UPDATE `order_item`
-        SET `order_item`.`is_deleted` = 0,
-            `order_item`.`last_modified_by` = #{lastModifiedBy}
-        WHERE `order_item`.`id` = #{id};
+        SET `is_deleted`       = 0,
+            `last_modified_by` = #{lastModifiedBy}
+        WHERE `id` = #{id};
     </update>
-
-    <select id="fetchScalar" parameterType="int" resultType="OrderItemEntity">
-        SELECT `order_item`.`id`,
-               `order_item`.`product_id`,
-               `order_item`.`quantity`,
-               `order_item`.`order_manifest_id`,
-               `order_item`.`created_at`,
-               `order_item`.`created_by`,
-               `order_item`.`last_modified_at`,
-               `order_item`.`last_modified_by`,
-               `order_item`.`is_deleted`
-        FROM `order_item`
-        WHERE `order_item`.`id` = #{id};
-    </select>
-
-    <select id="fetchAll" resultType="OrderItemEntity">
-        SELECT `order_item`.`id`,
-               `order_item`.`product_id`,
-               `order_item`.`quantity`,
-               `order_item`.`order_manifest_id`,
-               `order_item`.`created_at`,
-               `order_item`.`created_by`,
-               `order_item`.`last_modified_at`,
-               `order_item`.`last_modified_by`,
-               `order_item`.`is_deleted`
-        FROM `order_item`;
-    </select>
-
-    <select id="fetchManifestItems" parameterType="int" resultType="OrderItemEntity">
-        SELECT `order_item`.`id`,
-               `order_item`.`product_id`,
-               `order_item`.`quantity`,
-               `order_item`.`order_manifest_id`,
-               `order_item`.`created_at`,
-               `order_item`.`created_by`,
-               `order_item`.`last_modified_at`,
-               `order_item`.`last_modified_by`,
-               `order_item`.`is_deleted`
-        FROM `order_item`
-        WHERE `order_item`.`order_manifest_id` = #{manifestId};
-    </select>
-
-    <select id="limit" resultType="OrderItemEntity">
-        SELECT `order_item`.`id`,
-               `order_item`.`product_id`,
-               `order_item`.`quantity`,
-               `order_item`.`order_manifest_id`,
-               `order_item`.`created_at`,
-               `order_item`.`created_by`,
-               `order_item`.`last_modified_at`,
-               `order_item`.`last_modified_by`,
-               `order_item`.`is_deleted`
-        FROM `order_item`
-        LIMIT #{count} OFFSET #{offset};
-    </select>
-
-    <select id="countScalar" parameterType="int" resultType="int">
-        SELECT COUNT(1)
-        FROM `order_item`
-        WHERE `order_item`.`id` = #{id};
-    </select>
-
-    <select id="countAll" resultType="int">
-        SELECT COUNT(1)
-        FROM `order_item`;
-    </select>
 </mapper>

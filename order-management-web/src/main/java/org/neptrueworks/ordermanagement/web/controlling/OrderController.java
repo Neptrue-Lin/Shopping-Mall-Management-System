@@ -28,7 +28,7 @@ public class OrderController {
                                        @PathVariable("pageSize") Integer pageSize,
                                        HttpServletRequest request, HttpServletResponse response) throws IOException {
         response.setContentType("application/json");
-        response.getWriter().print(this.serializer.writeValueAsString(this.service.getLimitedOrderManifests(pageIndex, pageSize)));
+        response.getWriter().print(this.serializer.writeValueAsString(this.service.getPagedOrderManifests(pageIndex, pageSize)));
     }
 
     @GetMapping("/ordering/manifests/{pageSize}")
@@ -55,18 +55,12 @@ public class OrderController {
     @PutMapping("/ordering/manifest/cancel")
     public void cancelOrder(@RequestBody OrderManifestCancellationViewModel model,
                             HttpServletRequest request, HttpServletResponse response) {
-        OrderManifestEntity entity = new OrderManifestEntity();
-        entity.setId(model.getId());
-        entity.setCreatedBy(model.getCancelledBy());
-        this.service.cancelOrder(entity);
+        this.service.cancelOrder(model.getId());
     }
 
     @PutMapping("/ordering/manifest/resume")
     public void resumeOrder(@RequestBody OrderManifestResumptionViewModel model,
                             HttpServletRequest request, HttpServletResponse response) {
-        OrderManifestEntity entity = new OrderManifestEntity();
-        entity.setId(model.getId());
-        entity.setCreatedBy(model.getResumedBy());
-        this.service.resumeOrder(entity);
+        this.service.resumeOrder(model.getId());
     }
 }

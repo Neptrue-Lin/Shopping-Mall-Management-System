@@ -3,20 +3,18 @@ package org.neptrueworks.ordermanagement.core.servicing;
 
 import org.neptrueworks.ordermanagement.data.entitizing.ProductEntity;
 
-import java.util.List;
-
 public interface ProductServiceable extends IServiceable{
     void addProduct(ProductEntity product);
-    void removeProduct(ProductEntity entity);
-    void resumeProduct(ProductEntity entity);
+    void removeProduct(int productId);
+    void resumeProduct(int productId);
 
-    List<ProductEntity> getAllProduct();
-    List<ProductEntity> getLimitedProducts(int pageIndex, int pageSize);
+    Iterable<ProductEntity> getAllProduct();
+    Iterable<ProductEntity> getPagedProducts(int pageIndex, int pageSize);
 
-    int countAllProducts();
+    long countAllProducts();
 
     ProductEntity identifyProduct(int id);
 
-    void restock(ProductEntity entity, int increment);
-    void destock(ProductEntity entity, int decrement);
+    void restock(int id, int increment);
+    void destock(int id, int decrement);
 }

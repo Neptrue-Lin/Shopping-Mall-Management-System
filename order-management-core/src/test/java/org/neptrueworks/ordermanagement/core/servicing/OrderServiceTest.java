@@ -1,32 +1,33 @@
 package org.neptrueworks.ordermanagement.core.servicing;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InOrder;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import org.neptrueworks.ordermanagement.core.exceptions.ServiceExceptionIssue;
 import org.neptrueworks.ordermanagement.data.entitizing.OrderItemEntity;
 import org.neptrueworks.ordermanagement.data.entitizing.OrderManifestEntity;
 import org.neptrueworks.ordermanagement.data.entitizing.ProductEntity;
 import org.neptrueworks.ordermanagement.data.mapping.OrderItemEntityMappable;
 import org.neptrueworks.ordermanagement.data.mapping.OrderManifestEntityMappable;
 import org.neptrueworks.ordermanagement.data.mapping.ProductEntityMappable;
-import org.springframework.beans.factory.annotation.Autowired;
 
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.GregorianCalendar;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class OrderServiceTest {
-
     @Mock
     private OrderManifestEntityMappable mockManifestMapper;
     @Mock
@@ -35,424 +36,218 @@ class OrderServiceTest {
     private ProductEntityMappable mockProductMapper;
     @Mock
     private ProductService mockProductService;
-
     private OrderService orderServiceUnderTest;
 
     @BeforeEach
     void setUp() {
-        orderServiceUnderTest = new OrderService(mockManifestMapper, mockItemMapper, mockProductService);
+        this.orderServiceUnderTest = new OrderService(this.mockManifestMapper, this.mockItemMapper, this.mockProductService);
+    }
+
+    @ParameterizedTest(name = "{index}: {0}")
+    @ArgumentsSource(value = PaginationTestCase.ValidPaginationArgumentsProvider.class)
+    void testGetPagedOrderManifests_WithValidPagination_ReturnsNonEmptyPagedOrderManifests
+            (PaginationTestCase testCase) {
+        final OrderManifestEntity stubOrderManifest = FakeEntities.FAKE_ORDER_MANIFEST.duplicate();
+        final int offset = (testCase.getPageIndex() - 1) * testCase.getPageSize();
+        final int originalCount = testCase.getPageSize();
+        final int actualCount = offset + testCase.getPageSize() > testCase.getAmount() ?
+                testCase.getAmount() - offset :  //Partial page
+                testCase.getPageSize();          //Full page
+
+        final List<OrderManifestEntity> stubOrderManifests = new ArrayList<>();
+        for (int i = 0; i < actualCount; i++) {
+            stubOrderManifests.add(stubOrderManifest);
+        }
+        when(this.mockManifestMapper.take(offset, originalCount)).thenReturn(stubOrderManifests);
+
+        final Iterable<OrderManifestEntity> mockOrderManifests = this.orderServiceUnderTest.getPagedOrderManifests
+                (testCase.getPageIndex(), testCase.getPageSize());
+        assertIterableEquals(stubOrderManifests, mockOrderManifests);
+    }
+
+    @ParameterizedTest(name = "{index}: {0}")
+    @ArgumentsSource(value = PaginationTestCase.ValidPaginationArgumentsProvider.class)
+    void testGetPagedOrderManifests_WithInvalidPagination_ReturnsEmptyPagedOrderManifests
+            (PaginationTestCase testCase) {
+        final int offset = (testCase.getPageIndex() - 1) * testCase.getPageSize();
+        final int originalCount = testCase.getPageSize();
+        final List<OrderManifestEntity> stubOrderManifests = List.of();
+        when(this.mockManifestMapper.take(offset, originalCount)).thenReturn(stubOrderManifests);
+
+        final Iterable<OrderManifestEntity> mockOrderManifests = this.orderServiceUnderTest.getPagedOrderManifests
+                (testCase.getPageIndex(), testCase.getPageSize());
+        assertIterableEquals(stubOrderManifests, mockOrderManifests);
+    }
+
+    @Test
+    void testIdentifyOrderManifest() {
+        final OrderManifestEntity stubOrderManifest = FakeEntities.FAKE_ORDER_MANIFEST.duplicate();
+        when(this.mockManifestMapper.fetchScalar(stubOrderManifest.getId())).thenReturn(Optional.of(stubOrderManifest));
+
+        final OrderManifestEntity mockOrderManifest = this.orderServiceUnderTest.identifyOrderManifest(stubOrderManifest.getId());
+
+        assertEquals(stubOrderManifest, mockOrderManifest);
+    }
+
+    @Test
+    void testIdentifyOrderManifest_ManifestNotFound_ThrowsIllegalArgumentException() {
+        final OrderManifestEntity stubOrderManifest = FakeEntities.FAKE_ORDER_MANIFEST.duplicate();
+        when(this.mockManifestMapper.fetchScalar(stubOrderManifest.getId())).thenReturn(Optional.empty());
+        assertThrowsExactly(ServiceExceptionIssue.ORDER_MANIFEST_NOT_FOUND.getExceptionClass(),
+                () -> this.orderServiceUnderTest.identifyOrderManifest(stubOrderManifest.getId()),
+                ServiceExceptionIssue.ORDER_MANIFEST_NOT_FOUND.getMessage());
+        verifyNoInteractions(this.mockProductMapper);
+    }
+
+    @Test
+    void testIdentifyOrderItem() {
+        final OrderItemEntity stubOrderItem = FakeEntities.FAKE_ORDER_ITEM.duplicate();
+        when(this.mockItemMapper.fetchScalar(stubOrderItem.getId())).thenReturn(Optional.of(stubOrderItem));
+
+        final OrderItemEntity mockOrderItem = this.orderServiceUnderTest.identifyOrderItem(stubOrderItem.getId());
+        assertEquals(stubOrderItem, mockOrderItem);
+    }
+
+    @Test
+    void testIdentifyOrderItem_ManifestNotFound_ThrowsIllegalArgumentException() {
+        final OrderItemEntity stubOrderItem = FakeEntities.FAKE_ORDER_ITEM.duplicate();
+        when(this.mockItemMapper.fetchScalar(stubOrderItem.getId())).thenReturn(Optional.empty());
+
+        assertThrowsExactly(ServiceExceptionIssue.ORDER_ITEM_NOT_FOUND.getExceptionClass(),
+                () -> this.orderServiceUnderTest.identifyOrderItem(stubOrderItem.getId()),
+                ServiceExceptionIssue.ORDER_ITEM_NOT_FOUND.getMessage());
+        verifyNoInteractions(this.mockProductMapper);
+    }
+
+    @Test
+    void testIdentifyOrderItemByProductId() {
+        final OrderItemEntity stubOrderItem = FakeEntities.FAKE_ORDER_ITEM.duplicate();
+
+        when(this.mockItemMapper.findItemByProductId(stubOrderItem.getId(), stubOrderItem.getId()))
+                .thenReturn(Optional.of(stubOrderItem));
+        final Optional<OrderItemEntity> mockOrderItem = this.orderServiceUnderTest.identifyOrderItemByProductId
+                (stubOrderItem.getId(), stubOrderItem.getId());
+
+        assertEquals(Optional.of(stubOrderItem), mockOrderItem);
     }
 
     @Test
     void testPlaceOrder() {
-        // Setup
-        final OrderManifestEntity orderManifest = new OrderManifestEntity();
-        orderManifest.setId(1);
-        orderManifest.setGrossAmount(0.0);
-        orderManifest.setPaidAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        orderManifest.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        orderManifest.setDeleted(false);
+        final ProductEntity stubProduct = FakeEntities.FAKE_PRODUCT.duplicate();
+        when(this.mockProductService.identifyProduct(anyInt())).thenReturn(stubProduct);
 
-        final OrderItemEntity entity = new OrderItemEntity();
-        entity.setId(1);
-        entity.setProductId(1);
-        entity.setQuantity(1);
-        entity.setOrderManifestId(1);
-        entity.setDeleted(false);
-        final List<OrderItemEntity> items = List.of(entity);
+        final OrderManifestEntity stubOrderManifest = FakeEntities.FAKE_ORDER_MANIFEST.duplicate();
+        final OrderItemEntity stubOrderItem = FakeEntities.FAKE_ORDER_ITEM.duplicate();
+        this.orderServiceUnderTest.placeOrder(stubOrderManifest, List.of(stubOrderItem));
 
-        // Configure ProductService.identifyProduct(...).
-        final ProductEntity entity1 = new ProductEntity();
-        entity1.setId(1);
-        entity1.setName("name");
-        entity1.setPrice(10.0);
-        entity1.setStock(1);
-        entity1.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        when(mockProductService.identifyProduct(1)).thenReturn(entity1);
-
-        // Configure OrderManifestEntityMappable.add(...).
-        final OrderManifestEntity entity2 = new OrderManifestEntity();
-        entity2.setId(1);
-        entity2.setGrossAmount(0.0);
-        entity2.setPaidAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        entity2.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        entity2.setDeleted(false);
-        when(mockManifestMapper.add(entity2)).thenReturn(1);
-
-        //Configure ProductEntityMappable.fetchScalar(...)
-        final ProductEntity entity3 = new ProductEntity();
-        entity3.setId(1);
-        entity3.setName("name");
-        entity3.setPrice(0.0);
-        entity3.setStock(1);
-        entity3.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        when(mockProductMapper.fetchScalar(1)).thenReturn(entity3);
-
-        // Run the test
-        orderServiceUnderTest.placeOrder(orderManifest, items);
-
-        // Verify the results
-        // Confirm OrderItemEntityMappable.add(...).
-        final OrderItemEntity entity4 = new OrderItemEntity();
-        entity4.setId(1);
-        entity4.setProductId(1);
-        entity4.setQuantity(1);
-        entity4.setOrderManifestId(1);
-        entity4.setDeleted(false);
-        verify(mockItemMapper, atLeastOnce()).add(entity4);
-
-        // Confirm ProductService.destock(...).
-        final ProductEntity entity5 = new ProductEntity();
-        entity5.setId(1);
-        entity5.setName("name");
-        entity5.setPrice(0.0);
-        entity5.setStock(1);
-        entity5.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-
-        ProductService spied = spy(new ProductService(mockProductMapper));
-        spied.destock(entity5,1);
-        verify(spied).destock(entity5, 1);
-
-        // Confirm OrderManifestEntityMappable.updateGrossAmount(...).
-        final OrderManifestEntity orderManifest1 = new OrderManifestEntity();
-        orderManifest1.setId(1);
-        orderManifest1.setGrossAmount(0.0);
-        orderManifest1.setPaidAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        orderManifest1.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        orderManifest1.setDeleted(false);
-        //verify(mockManifestMapper).updateGrossAmount(orderManifest1);
+        verify(this.mockManifestMapper).add(stubOrderManifest);
+        verify(this.mockItemMapper).add(stubOrderItem);
+        verify(this.mockManifestMapper).updateGrossAmount(stubOrderManifest);
     }
 
     @Test
-    void testPlaceOrder_ItemWithLessThanZeroQuantity() {
-        // Setup
-        final OrderManifestEntity orderManifest = new OrderManifestEntity();
-        orderManifest.setId(1);
-        orderManifest.setGrossAmount(0.0);
-        orderManifest.setPaidAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        orderManifest.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        orderManifest.setDeleted(false);
+    void testCancelOrder_ManifestNotBeenRemoved_RemoveOrder() {
+        final OrderManifestEntity stubOrderManifest = FakeEntities.FAKE_ORDER_MANIFEST.duplicate();
+        when(this.mockManifestMapper.fetchScalar(stubOrderManifest.getId())).thenReturn(Optional.of(stubOrderManifest));
 
-        final OrderItemEntity entity = new OrderItemEntity();
-        entity.setId(1);
-        entity.setProductId(1);
-        entity.setQuantity(-1);
-        entity.setOrderManifestId(1);
-        entity.setDeleted(false);
-        final List<OrderItemEntity> items = List.of(entity);
-
-//        // Configure ProductService.identifyProduct(...).
-//        final ProductEntity entity1 = new ProductEntity();
-//        entity1.setId(1);
-//        entity1.setName("name");
-//        entity1.setPrice(10.0);
-//        entity1.setStock(1);
-//        entity1.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-//        when(mockProductService.identifyProduct(1)).thenReturn(entity1);
-//
-//        // Configure OrderManifestEntityMappable.add(...).
-//        final OrderManifestEntity entity2 = new OrderManifestEntity();
-//        entity2.setId(1);
-//        entity2.setGrossAmount(0.0);
-//        entity2.setPaidAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-//        entity2.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-//        entity2.setDeleted(false);
-//        when(mockManifestMapper.add(entity2)).thenReturn(1);
-
-        try {
-            // Run the test
-            orderServiceUnderTest.placeOrder(orderManifest, items);
-            Assertions.fail();
-        } catch (IllegalArgumentException e) {
-            // Verify the results
-            // Confirm OrderItemEntityMappable.add(...).
-            final OrderItemEntity entity3 = new OrderItemEntity();
-            entity3.setId(1);
-            entity3.setProductId(1);
-            entity3.setQuantity(-1);
-            entity3.setOrderManifestId(1);
-            entity3.setDeleted(false);
-            verify(mockItemMapper, Mockito.never()).add(entity3);
-
-            // Confirm ProductService.destock(...).
-            final ProductEntity entity4 = new ProductEntity();
-            entity4.setId(1);
-            entity4.setName("name");
-            entity4.setPrice(10.0);
-            entity4.setStock(1);
-            entity4.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-            verify(mockProductService, Mockito.never()).destock(entity4, -1);
-
-            // Confirm OrderManifestEntityMappable.updateGrossAmount(...).
-            final OrderManifestEntity orderManifest1 = new OrderManifestEntity();
-            orderManifest1.setId(1);
-            orderManifest1.setGrossAmount(-10.0);
-            orderManifest1.setPaidAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-            orderManifest1.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-            orderManifest1.setDeleted(false);
-            verify(mockManifestMapper, Mockito.never()).updateGrossAmount(orderManifest1);
-        }
+        this.orderServiceUnderTest.cancelOrder(stubOrderManifest.getId());
+        verify(this.mockManifestMapper).removeScalar(stubOrderManifest.getId());
     }
 
     @Test
-    void testPlaceOrder_ProductWithLessThanZeroStock() {
-        // Setup
-        final OrderManifestEntity orderManifest = new OrderManifestEntity();
-        orderManifest.setId(1);
-        orderManifest.setGrossAmount(0.0);
-        orderManifest.setPaidAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        orderManifest.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        orderManifest.setDeleted(false);
+    void testCancelOrder_ManifestBeenRemoved_NotRemoveOrder() {
+        final OrderManifestEntity stubOrderManifest = FakeEntities.FAKE_ORDER_MANIFEST.duplicate();
+        stubOrderManifest.setDeleted(Boolean.TRUE);
+        when(this.mockManifestMapper.fetchScalar(stubOrderManifest.getId())).thenReturn(Optional.of(stubOrderManifest));
 
-        final OrderItemEntity entity = new OrderItemEntity();
-        entity.setId(1);
-        entity.setProductId(1);
-        entity.setQuantity(1);
-        entity.setOrderManifestId(1);
-        entity.setDeleted(false);
-        final List<OrderItemEntity> items = List.of(entity);
-
-        // Configure ProductService.identifyProduct(...).
-        final ProductEntity entity1 = new ProductEntity();
-        entity1.setId(1);
-        entity1.setName("name");
-        entity1.setPrice(10.0);
-        entity1.setStock(-1);
-        entity1.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        when(mockProductService.identifyProduct(1)).thenReturn(entity1);
-
-//        // Configure OrderManifestEntityMappable.add(...).
-//        final OrderManifestEntity entity2 = new OrderManifestEntity();
-//        entity2.setId(1);
-//        entity2.setGrossAmount(0.0);
-//        entity2.setPaidAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-//        entity2.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-//        entity2.setDeleted(false);
-//        when(mockManifestMapper.add(entity2)).thenReturn(1);
-
-        // Run the test
-        try {
-            // Run the test
-            orderServiceUnderTest.placeOrder(orderManifest, items);
-            Assertions.fail();
-        } catch (IllegalArgumentException e) {
-            // Verify the results
-            // Confirm OrderItemEntityMappable.add(...).
-            final OrderItemEntity entity3 = new OrderItemEntity();
-            entity3.setId(1);
-            entity3.setProductId(1);
-            entity3.setQuantity(1);
-            entity3.setOrderManifestId(1);
-            entity3.setDeleted(false);
-            verify(mockItemMapper, Mockito.never()).add(entity3);
-
-            // Confirm ProductService.destock(...).
-            final ProductEntity entity4 = new ProductEntity();
-            entity4.setId(1);
-            entity4.setName("name");
-            entity4.setPrice(10.0);
-            entity4.setStock(-1);
-            entity4.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-            verify(mockProductService, Mockito.never()).destock(entity4, 1);
-
-            // Confirm OrderManifestEntityMappable.updateGrossAmount(...).
-            final OrderManifestEntity orderManifest1 = new OrderManifestEntity();
-            orderManifest1.setId(1);
-            orderManifest1.setGrossAmount(10.0);
-            orderManifest1.setPaidAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-            orderManifest1.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-            orderManifest1.setDeleted(false);
-            verify(mockManifestMapper, Mockito.never()).updateGrossAmount(orderManifest1);
-        }
+        this.orderServiceUnderTest.cancelOrder(stubOrderManifest.getId());
+        verify(this.mockManifestMapper, never()).removeScalar(stubOrderManifest.getId());
     }
 
     @Test
-    void testCancelOrder() {
-        // Setup
-        final OrderManifestEntity orderManifest = new OrderManifestEntity();
-        orderManifest.setId(1);
-        orderManifest.setGrossAmount(0.0);
-        orderManifest.setPaidAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        orderManifest.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        orderManifest.setDeleted(false);
+    void testResumeOrder_ManifestBeenRemoved_ResumeOrder() {
+        final OrderManifestEntity stubOrderManifest = FakeEntities.FAKE_ORDER_MANIFEST.duplicate();
+        stubOrderManifest.setDeleted(Boolean.TRUE);
+        when(this.mockManifestMapper.fetchScalar(stubOrderManifest.getId())).thenReturn(Optional.of(stubOrderManifest));
 
-        // Run the test
-        orderServiceUnderTest.cancelOrder(orderManifest);
-
-        // Verify the results
-        verify(mockManifestMapper).removeScalar(1);
+        this.orderServiceUnderTest.resumeOrder(stubOrderManifest.getId());
+        verify(this.mockManifestMapper).resumeScalar(stubOrderManifest.getId());
     }
 
     @Test
-    void testResumeOrder() {
-        // Setup
-        final OrderManifestEntity orderManifest = new OrderManifestEntity();
-        orderManifest.setId(1);
-        orderManifest.setGrossAmount(0.0);
-        orderManifest.setPaidAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        orderManifest.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        orderManifest.setDeleted(true);
+    void testResumeOrder_ManifestNotBeenRemoved_NotResumeOrder() {
+        final OrderManifestEntity stubOrderManifest = FakeEntities.FAKE_ORDER_MANIFEST.duplicate();
+        when(this.mockManifestMapper.fetchScalar(stubOrderManifest.getId())).thenReturn(Optional.of(stubOrderManifest));
 
-        // Run the test
-        orderServiceUnderTest.resumeOrder(orderManifest);
-
-        //Verify the results
-        verify(mockManifestMapper).resumeScalar(1);
+        this.orderServiceUnderTest.resumeOrder(stubOrderManifest.getId());
+        verify(this.mockManifestMapper, never()).resumeScalar(stubOrderManifest.getId());
     }
 
     @Test
     void testOrderItem() {
-        // Setup
-        final OrderItemEntity orderItem = new OrderItemEntity();
-        orderItem.setId(1);
-        orderItem.setProductId(1);
-        orderItem.setQuantity(1);
-        orderItem.setOrderManifestId(1);
-        orderItem.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
+        final ProductEntity stubProduct = FakeEntities.FAKE_PRODUCT.duplicate();
+        final OrderItemEntity stubOrderItem = FakeEntities.FAKE_ORDER_ITEM.duplicate();
+        when(this.mockProductService.identifyProduct(stubOrderItem.getProductId())).thenReturn(stubProduct);
 
-        // Run the test
-        orderServiceUnderTest.orderItem(orderItem);
+        this.orderServiceUnderTest.orderItem(stubOrderItem);
 
-        // Verify the results
-        // Confirm OrderItemEntityMappable.add(...).
-        final OrderItemEntity entity = new OrderItemEntity();
-        entity.setId(1);
-        entity.setProductId(1);
-        entity.setQuantity(1);
-        entity.setOrderManifestId(1);
-        entity.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        verify(mockItemMapper).add(entity);
+        verify(this.mockItemMapper).add(stubOrderItem);
+    }
+
+    @ParameterizedTest(name = "{index}: {0}")
+    @ArgumentsSource(ItemOrderingTestCase.InvalidItemOrderingArgumentsProvider.class)
+    void testOrderItem_InvalidQuantity_ThrowsIllegalException
+            (ItemOrderingTestCase testCase) {
+        final OrderItemEntity stubOrderItem = FakeEntities.FAKE_ORDER_ITEM.duplicate();
+        stubOrderItem.setQuantity(testCase.getQuantity());
+
+        final ProductEntity stubProduct = FakeEntities.FAKE_PRODUCT.duplicate();
+        stubProduct.setStock(testCase.getStock());
+        when(this.mockProductService.identifyProduct(stubOrderItem.getProductId())).thenReturn(stubProduct);
+
+
+        assertThrowsExactly(testCase.getExceptionIssue().getExceptionClass(),
+                () -> this.orderServiceUnderTest.orderItem(stubOrderItem),
+                testCase.getExceptionIssue().getMessage());
+
+        verify(this.mockItemMapper, never()).add(stubOrderItem);
     }
 
     @Test
-    void testRemoveItem() {
-        // Setup
-        final OrderItemEntity orderItem = new OrderItemEntity();
-        orderItem.setId(1);
-        orderItem.setProductId(1);
-        orderItem.setQuantity(1);
-        orderItem.setOrderManifestId(1);
-        orderItem.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        orderItem.setDeleted(false);
+    void testRemoveItem_ItemNotBeenRemoved_RemoveItem() {
+        final OrderItemEntity stubOrderItem = FakeEntities.FAKE_ORDER_ITEM.duplicate();
+        when(this.mockItemMapper.fetchScalar(stubOrderItem.getId())).thenReturn(Optional.of(stubOrderItem));
 
-        // Run the test
-        orderServiceUnderTest.removeItem(orderItem);
-
-        // Verify the results
-        verify(mockItemMapper).removeScalar(1);
+        this.orderServiceUnderTest.removeItem(stubOrderItem.getId());
+        verify(this.mockItemMapper).removeScalar(stubOrderItem.getId());
     }
 
     @Test
-    void testRestoreItem() {
-        // Setup
-        final OrderItemEntity orderItem = new OrderItemEntity();
-        orderItem.setId(1);
-        orderItem.setProductId(1);
-        orderItem.setQuantity(1);
-        orderItem.setOrderManifestId(1);
-        orderItem.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        orderItem.setDeleted(true);
+    void testResumeItem_ItemBeenRemoved_NotRemoveItem() {
+        final OrderItemEntity stubOrderItem = FakeEntities.FAKE_ORDER_ITEM.duplicate();
+        stubOrderItem.setDeleted(true);
+        when(this.mockItemMapper.fetchScalar(stubOrderItem.getId())).thenReturn(Optional.of(stubOrderItem));
 
-        // Run the test
-        orderServiceUnderTest.restoreItem(orderItem);
-
-        // Verify the results
-        verify(mockItemMapper).resumeScalar(1);
+        this.orderServiceUnderTest.restoreItem(stubOrderItem.getId());
+        verify(this.mockItemMapper, never()).removeScalar(stubOrderItem.getId());
     }
 
     @Test
-    void testGetAllOrderManifests() {
-        // Setup
-        final OrderManifestEntity entity = new OrderManifestEntity();
-        entity.setId(1);
-        entity.setGrossAmount(0.0);
-        entity.setPaidAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        entity.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        entity.setDeleted(false);
-        final List<OrderManifestEntity> expectedResult = List.of(entity);
+    void testRestoreItem_ItemBeenRemoved_RestoreItem() {
+        final OrderItemEntity stubOrderItem = FakeEntities.FAKE_ORDER_ITEM.duplicate();
+        stubOrderItem.setDeleted(true);
+        when(this.mockItemMapper.fetchScalar(stubOrderItem.getId())).thenReturn(Optional.of(stubOrderItem));
 
-        // Configure OrderManifestEntityMappable.fetchAll(...).
-        final OrderManifestEntity entity1 = new OrderManifestEntity();
-        entity1.setId(1);
-        entity1.setGrossAmount(0.0);
-        entity1.setPaidAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        entity1.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        entity1.setDeleted(false);
-        final List<OrderManifestEntity> orderManifestEntities = List.of(entity1);
-        when(mockManifestMapper.fetchAll()).thenReturn(orderManifestEntities);
-
-        // Run the test
-        final List<OrderManifestEntity> result = orderServiceUnderTest.getAllOrderManifests();
-
-        // Verify the results
-        assertEquals(expectedResult, result);
+        this.orderServiceUnderTest.restoreItem(stubOrderItem.getId());
+        verify(this.mockItemMapper).resumeScalar(stubOrderItem.getId());
     }
 
     @Test
-    void testGetLimitedOrderManifests() {
-        // Setup
-        final OrderManifestEntity entity = new OrderManifestEntity();
-        entity.setId(1);
-        entity.setGrossAmount(0.0);
-        entity.setPaidAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        entity.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        entity.setDeleted(false);
-        final List<OrderManifestEntity> expectedResult = List.of(entity);
+    void testRestoreItem_ItemNotBeenRemoved_NotRestoreItem() {
+        final OrderItemEntity stubOrderItem = FakeEntities.FAKE_ORDER_ITEM.duplicate();
+        when(this.mockItemMapper.fetchScalar(stubOrderItem.getId())).thenReturn(Optional.of(stubOrderItem));
 
-        // Configure OrderManifestEntityMappable.limitOffset(...).
-        final OrderManifestEntity entity1 = new OrderManifestEntity();
-        entity1.setId(1);
-        entity1.setGrossAmount(0.0);
-        entity1.setPaidAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        entity1.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        entity1.setDeleted(false);
-        final List<OrderManifestEntity> orderManifestEntities = List.of(entity1);
-        when(mockManifestMapper.limitOffset(0, 10)).thenReturn(orderManifestEntities);
-
-        // Run the test
-        final List<OrderManifestEntity> result = orderServiceUnderTest.getLimitedOrderManifests(1, 10);
-
-        // Verify the results
-        assertEquals(expectedResult, result);
-    }
-
-    @Test
-    void testCountAllOrderManifests() {
-        // Setup
-        when(mockManifestMapper.countAll()).thenReturn(10);
-
-        // Run the test
-        final int result = orderServiceUnderTest.countAllOrderManifests();
-
-        // Verify the results
-        assertEquals(10, result);
-    }
-
-    @Test
-    void testGetOrderItems() {
-        // Setup
-        final OrderItemEntity entity = new OrderItemEntity();
-        entity.setId(1);
-        entity.setProductId(1);
-        entity.setQuantity(1);
-        entity.setOrderManifestId(1);
-        entity.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        final List<OrderItemEntity> expectedResult = List.of(entity);
-
-        // Configure OrderItemEntityMappable.fetchManifestItems(...).
-        final OrderItemEntity entity1 = new OrderItemEntity();
-        entity1.setId(1);
-        entity1.setProductId(1);
-        entity1.setQuantity(1);
-        entity1.setOrderManifestId(1);
-        entity1.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        final List<OrderItemEntity> orderItemEntities = List.of(entity1);
-        when(mockItemMapper.fetchManifestItems(1)).thenReturn(orderItemEntities);
-
-        // Run the test
-        final List<OrderItemEntity> result = orderServiceUnderTest.getOrderItems(1);
-
-        // Verify the results
-        assertEquals(expectedResult, result);
+        this.orderServiceUnderTest.restoreItem(stubOrderItem.getId());
+        verify(this.mockItemMapper, never()).resumeScalar(stubOrderItem.getId());
     }
 }

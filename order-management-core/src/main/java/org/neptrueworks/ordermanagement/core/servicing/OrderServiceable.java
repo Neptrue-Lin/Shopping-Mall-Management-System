@@ -4,27 +4,37 @@ import org.neptrueworks.ordermanagement.data.entitizing.OrderItemEntity;
 import org.neptrueworks.ordermanagement.data.entitizing.OrderManifestEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.util.Optional;
 
 @Service
 public interface OrderServiceable extends IServiceable {
-    void placeOrder(OrderManifestEntity orderManifest, List<OrderItemEntity> items);
+    void placeOrder(OrderManifestEntity orderManifest, Iterable<OrderItemEntity> items);
 
-    void cancelOrder(OrderManifestEntity orderManifest);
+    void cancelOrder(int manifestId);
 
-    void resumeOrder(OrderManifestEntity orderManifest);
+    void resumeOrder(int manifestId);
 
     void orderItem(OrderItemEntity orderItem);
 
-    void removeItem(OrderItemEntity orderItem);
+    void removeItem(int itemId);
 
-    void restoreItem(OrderItemEntity orderItem);
+    void restoreItem(int itemId);
 
-    List<OrderManifestEntity> getAllOrderManifests();
+    Iterable<OrderManifestEntity> getAllOrderManifests();
 
-    List<OrderManifestEntity> getLimitedOrderManifests(int pageIndex, int pageSize);
+    Iterable<OrderManifestEntity> getPagedOrderManifests(int pageIndex, int pageSize);
 
-    int countAllOrderManifests();
+    long countAllOrderManifests();
 
-    List<OrderItemEntity> getOrderItems(int manifestId);
+    boolean existsOrderManifest(int manifestId);
+
+    boolean existsOrderItem(int itemId);
+
+    Optional<OrderItemEntity> identifyOrderItemByProductId(int manifestId, int productId);
+
+    Iterable<OrderItemEntity> getOrderItems(int manifestId);
+
+    OrderManifestEntity identifyOrderManifest(int manifestId);
+
+    OrderItemEntity identifyOrderItem(int itemId);
 }

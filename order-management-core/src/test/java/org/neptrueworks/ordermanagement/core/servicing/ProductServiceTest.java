@@ -1,30 +1,28 @@
 package org.neptrueworks.ordermanagement.core.servicing;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.neptrueworks.ordermanagement.core.exceptions.ServiceExceptionIssue;
 import org.neptrueworks.ordermanagement.data.entitizing.ProductEntity;
 import org.neptrueworks.ordermanagement.data.mapping.ProductEntityMappable;
 
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.GregorianCalendar;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ProductServiceTest {
-
     @Mock
     private ProductEntityMappable mockProductMapper;
-
     private ProductService productServiceUnderTest;
 
     @BeforeEach
@@ -32,387 +30,177 @@ class ProductServiceTest {
         productServiceUnderTest = new ProductService(mockProductMapper);
     }
 
-    @Test
-    void testAddProduct() {
-        // Setup
-        final ProductEntity product = new ProductEntity();
-        product.setId(1);
-        product.setName("name");
-        product.setPrice(0.0);
-        product.setStock(1);
-        product.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
+    @ParameterizedTest(name = "{index}: {0}")
+    @ArgumentsSource(value = PaginationTestCase.ValidPaginationArgumentsProvider.class)
+    void testGetPagedProducts_WithValidPagination_ReturnsNonEmptyPagedProducts
+            (PaginationTestCase testCase) {
+        final ProductEntity stubProduct = FakeEntities.FAKE_PRODUCT.duplicate();
+        final int offset = (testCase.getPageIndex() - 1) * testCase.getPageSize();
+        final int originalCount = testCase.getPageSize();
+        final int actualCount = offset + testCase.getPageSize() > testCase.getAmount() ?
+                testCase.getAmount() - offset :  //Partial page
+                testCase.getPageSize();          //Full page
 
-        // Run the test
-        productServiceUnderTest.addProduct(product);
+        final List<ProductEntity> stubProducts = new ArrayList<>();
+        for (int i = 0; i < actualCount; i++) {
+            stubProducts.add(stubProduct);
+        }
+        when(this.mockProductMapper.take(offset, originalCount)).thenReturn(stubProducts);
 
-        // Verify the results
-        // Confirm ProductEntityMappable.add(...).
-        final ProductEntity entity = new ProductEntity();
-        entity.setId(1);
-        entity.setName("name");
-        entity.setPrice(0.0);
-        entity.setStock(1);
-        entity.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        verify(mockProductMapper).add(entity);
+        final Iterable<ProductEntity> mockProducts = this.productServiceUnderTest.getPagedProducts
+                (testCase.getPageIndex(), testCase.getPageSize());
+        assertIterableEquals(stubProducts, mockProducts);
     }
 
-    @Test
-    void testRemoveProduct() {
-        // Setup
-        final ProductEntity product = new ProductEntity();
-        product.setId(1);
-        product.setName("name");
-        product.setPrice(0.0);
-        product.setStock(1);
-        product.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        product.setDeleted(false);
+    @ParameterizedTest(name = "{index}: {0}")
+    @ArgumentsSource(value = PaginationTestCase.InvalidPaginationArgumentsProvider.class)
+    void testGetPagedProducts_WithInvalidPagination_ReturnsEmptyPagedProducts
+            (PaginationTestCase testCase) {
+        final int offset = (testCase.getPageIndex() - 1) * testCase.getPageSize();
+        final int originalCount = testCase.getPageSize();
+        final List<ProductEntity> stubProducts = List.of();
+        when(this.mockProductMapper.take(offset, originalCount)).thenReturn(stubProducts);
 
-        // Run the test
-        productServiceUnderTest.removeProduct(product);
-
-        // Verify the results
-        verify(mockProductMapper).removeScalar(1);
-    }
-
-    @Test
-    void testResumeProduct() {
-        // Setup
-        final ProductEntity product = new ProductEntity();
-        product.setId(1);
-        product.setName("name");
-        product.setPrice(0.0);
-        product.setStock(1);
-        product.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        product.setDeleted(true);
-
-        // Run the test
-        productServiceUnderTest.resumeProduct(product);
-
-        // Verify the results
-        verify(mockProductMapper).resumeScalar(1);
-    }
-
-    @Test
-    void testGetAllProduct() {
-        // Setup
-        final ProductEntity entity = new ProductEntity();
-        entity.setId(1);
-        entity.setName("name");
-        entity.setPrice(0.0);
-        entity.setStock(1);
-        entity.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        final List<ProductEntity> expectedResult = List.of(entity);
-
-        // Configure ProductEntityMappable.fetchAll(...).
-        final ProductEntity entity1 = new ProductEntity();
-        entity1.setId(1);
-        entity1.setName("name");
-        entity1.setPrice(0.0);
-        entity1.setStock(1);
-        entity1.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        final List<ProductEntity> productEntities = List.of(entity1);
-        when(mockProductMapper.fetchAll()).thenReturn(productEntities);
-
-        // Run the test
-        final List<ProductEntity> result = productServiceUnderTest.getAllProduct();
-
-        // Verify the results
-        assertEquals(expectedResult, result);
-    }
-
-    @Test
-    void testGetAllProduct_ProductEntityMappableReturnsNoItems() {
-        // Setup
-        when(mockProductMapper.fetchAll()).thenReturn(Collections.emptyList());
-
-        // Run the test
-        final List<ProductEntity> result = productServiceUnderTest.getAllProduct();
-
-        // Verify the results
-        assertEquals(Collections.emptyList(), result);
-    }
-
-    @Test
-    void testGetLimitedProduct() {
-        // Setup
-        final ProductEntity entity = new ProductEntity();
-        entity.setId(1);
-        entity.setName("name");
-        entity.setPrice(0.0);
-        entity.setStock(1);
-        entity.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        final List<ProductEntity> expectedResult = List.of(entity);
-
-        // Configure ProductEntityMappable.limitOffset(...).
-        final ProductEntity entity1 = new ProductEntity();
-        entity1.setId(1);
-        entity1.setName("name");
-        entity1.setPrice(0.0);
-        entity1.setStock(1);
-        entity1.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        final List<ProductEntity> productEntities = List.of(entity1);
-        when(mockProductMapper.limitOffset(10, 10)).thenReturn(productEntities);
-
-        // Run the test
-        final List<ProductEntity> result = productServiceUnderTest.getLimitedProducts(2, 10);
-
-        // Verify the results
-        assertEquals(expectedResult, result);
+        final Iterable<ProductEntity> mockProducts = this.productServiceUnderTest.getPagedProducts
+                (testCase.getPageIndex(), testCase.getPageSize());
+        assertIterableEquals(stubProducts, mockProducts);
     }
 
     @Test
     void testIdentifyProduct() {
-        // Setup
-        final ProductEntity expectedResult = new ProductEntity();
-        expectedResult.setId(1);
-        expectedResult.setName("name");
-        expectedResult.setPrice(0.0);
-        expectedResult.setStock(1);
-        expectedResult.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
+        final ProductEntity stubProduct = FakeEntities.FAKE_PRODUCT.duplicate();
+        when(this.mockProductMapper.fetchScalar(stubProduct.getId())).thenReturn(Optional.of(stubProduct));
 
-        // Configure ProductEntityMappable.fetchScalar(...).
-        final ProductEntity entity = new ProductEntity();
-        entity.setId(1);
-        entity.setName("name");
-        entity.setPrice(0.0);
-        entity.setStock(1);
-        entity.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        when(mockProductMapper.fetchScalar(1)).thenReturn(entity);
+        final ProductEntity mockProduct = this.productServiceUnderTest.identifyProduct(stubProduct.getId());
 
-        // Run the test
-        final ProductEntity result = productServiceUnderTest.identifyProduct(1);
-
-        // Verify the results
-        assertEquals(expectedResult, result);
+        assertEquals(stubProduct, mockProduct);
     }
 
     @Test
-    void testRestock() {
-        // Setup
-        final ProductEntity entity = new ProductEntity();
-        entity.setId(1);
-        entity.setName("name");
-        entity.setPrice(0.0);
-        entity.setStock(1);
-        entity.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
+    void testIdentifyProduct_ProductNonexistent_ThrowsIllegalStateException() {
+        final ProductEntity stubProduct = FakeEntities.FAKE_PRODUCT.duplicate();
+        when(this.mockProductMapper.fetchScalar(stubProduct.getId())).thenReturn(Optional.empty());
 
-        //Configure ProductEntityMappable.fetchScalar(...)
-        final ProductEntity entity3 = new ProductEntity();
-        entity3.setId(1);
-        entity3.setName("name");
-        entity3.setPrice(0.0);
-        entity3.setStock(1);
-        entity3.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        when(mockProductMapper.fetchScalar(1)).thenReturn(entity3);
-
-        // Run the test
-        productServiceUnderTest.restock(entity, 1);
-
-        // Verify the results
-        // Confirm ProductEntityMappable.updateStock(...).
-        final ProductEntity entity1 = new ProductEntity();
-        entity1.setId(1);
-        entity1.setName("name");
-        entity1.setPrice(0.0);
-        entity1.setStock(2);
-        entity1.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        verify(mockProductMapper).updateStock(entity1);
+        assertThrowsExactly(ServiceExceptionIssue.PRODUCT_NONEXISTENT.getExceptionClass(),
+                () -> this.productServiceUnderTest.identifyProduct(stubProduct.getId()),
+                ServiceExceptionIssue.PRODUCT_NONEXISTENT.getMessage());
     }
 
     @Test
-    void testRestock_IncrementLessThanZero() {
-        // Setup
-        final ProductEntity entity = new ProductEntity();
-        entity.setId(1);
-        entity.setName("name");
-        entity.setPrice(0.0);
-        entity.setStock(1);
-        entity.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
+    void testAddProduct() {
+        final ProductEntity stubProduct = FakeEntities.FAKE_PRODUCT.duplicate();
+        this.productServiceUnderTest.addProduct(stubProduct);
 
-        //Configure ProductEntityMappable.fetchScalar(...)
-        final ProductEntity entity3 = new ProductEntity();
-        entity3.setId(1);
-        entity3.setName("name");
-        entity3.setPrice(0.0);
-        entity3.setStock(1);
-        entity3.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        when(mockProductMapper.fetchScalar(1)).thenReturn(entity3);
-
-        try {
-            // Run the test
-            productServiceUnderTest.restock(entity, -1);
-            Assertions.fail();
-        } catch (IllegalArgumentException e) {
-            // Verify the results
-            // Confirm ProductEntityMappable.updateStock(...).
-            final ProductEntity entity1 = new ProductEntity();
-            entity1.setId(1);
-            entity1.setName("name");
-            entity1.setPrice(0.0);
-            entity1.setStock(0);
-            entity1.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-            verify(mockProductMapper, Mockito.never()).updateStock(entity1);
-        }
+        verify(this.mockProductMapper).add(stubProduct);
     }
 
     @Test
-    void testRestock_StockWithLessThanZero() {
-        // Setup
-        final ProductEntity entity = new ProductEntity();
-        entity.setId(1);
-        entity.setName("name");
-        entity.setPrice(0.0);
-        entity.setStock(-1);
-        entity.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
+    void testRemoveProduct_ProductNotBeenRemoved_RemoveProduct() {
+        final ProductEntity stubProduct = FakeEntities.FAKE_PRODUCT.duplicate();
+        when(this.mockProductMapper.fetchScalar(stubProduct.getId())).thenReturn(Optional.of(stubProduct));
 
-        //Configure ProductEntityMappable.fetchScalar(...)
-        final ProductEntity entity3 = new ProductEntity();
-        entity3.setId(1);
-        entity3.setName("name");
-        entity3.setPrice(0.0);
-        entity3.setStock(1);
-        entity3.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        when(mockProductMapper.fetchScalar(1)).thenReturn(entity3);
-
-        // Run the test
-        productServiceUnderTest.restock(entity, 1);
-
-        // Verify the results
-        // Confirm ProductEntityMappable.updateStock(...).
-        final ProductEntity entity1 = new ProductEntity();
-        entity1.setId(1);
-        entity1.setName("name");
-        entity1.setPrice(0.0);
-        entity1.setStock(0);
-        entity1.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        verify(mockProductMapper, Mockito.never()).updateStock(entity1);
+        this.productServiceUnderTest.removeProduct(stubProduct.getId());
+        verify(this.mockProductMapper).removeScalar(stubProduct.getId());
     }
 
     @Test
-    void testDestock() {
-        // Setup
-        final ProductEntity entity = new ProductEntity();
-        entity.setId(1);
-        entity.setName("name");
-        entity.setPrice(0.0);
-        entity.setStock(1);
-        entity.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
+    void testResumeProduct_ProductBeenRemoved_NotRemoveProduct() {
+        final ProductEntity stubProduct = FakeEntities.FAKE_PRODUCT.duplicate();
+        stubProduct.setDeleted(Boolean.TRUE);
+        when(this.mockProductMapper.fetchScalar(stubProduct.getId())).thenReturn(Optional.of(stubProduct));
 
-        //Configure ProductEntityMappable.fetchScalar(...)
-        final ProductEntity entity3 = new ProductEntity();
-        entity3.setId(1);
-        entity3.setName("name");
-        entity3.setPrice(0.0);
-        entity3.setStock(1);
-        entity3.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        when(mockProductMapper.fetchScalar(1)).thenReturn(entity3);
-
-        // Run the test
-        productServiceUnderTest.destock(entity, 1);
-
-        // Verify the results
-        // Confirm ProductEntityMappable.updateStock(...).
-        final ProductEntity entity1 = new ProductEntity();
-        entity1.setId(1);
-        entity1.setName("name");
-        entity1.setPrice(0.0);
-        entity1.setStock(0);
-        entity1.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        verify(mockProductMapper).updateStock(entity1);
+        this.productServiceUnderTest.resumeProduct(stubProduct.getId());
+        verify(this.mockProductMapper, never()).removeScalar(stubProduct.getId());
     }
 
     @Test
-    void testDestock_IncrementLessThanZero() {
-        // Setup
-        final ProductEntity entity = new ProductEntity();
-        entity.setId(1);
-        entity.setName("name");
-        entity.setPrice(0.0);
-        entity.setStock(1);
-        entity.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
+    void testResumeProduct_ProductBeenRemoved_ResumeProduct() {
+        final ProductEntity stubProduct = FakeEntities.FAKE_PRODUCT.duplicate();
+        stubProduct.setDeleted(Boolean.TRUE);
+        when(this.mockProductMapper.fetchScalar(stubProduct.getId())).thenReturn(Optional.of(stubProduct));
 
-        //Configure ProductEntityMappable.fetchScalar(...)
-        final ProductEntity entity3 = new ProductEntity();
-        entity3.setId(1);
-        entity3.setName("name");
-        entity3.setPrice(0.0);
-        entity3.setStock(1);
-        entity3.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        when(mockProductMapper.fetchScalar(1)).thenReturn(entity3);
-
-        try {
-            // Run the test
-            productServiceUnderTest.destock(entity, -1);
-        } catch (IllegalArgumentException e) {
-            // Verify the results
-            // Confirm ProductEntityMappable.updateStock(...).
-            final ProductEntity entity1 = new ProductEntity();
-            entity1.setId(1);
-            entity1.setName("name");
-            entity1.setPrice(0.0);
-            entity1.setStock(2);
-            entity1.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-            verify(mockProductMapper, Mockito.never()).updateStock(entity1);
-        }
+        this.productServiceUnderTest.resumeProduct(stubProduct.getId());
+        verify(this.mockProductMapper).resumeScalar(stubProduct.getId());
     }
 
     @Test
-    void testDestock_StockWithLessThanZero() {
-        // Setup
-        final ProductEntity entity = new ProductEntity();
-        entity.setId(1);
-        entity.setName("name");
-        entity.setPrice(0.0);
-        entity.setStock(-1);
-        entity.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
+    void testResumeProduct_ProductNotBeenRemoved_NotResumeProduct() {
+        final ProductEntity stubProduct = FakeEntities.FAKE_PRODUCT.duplicate();
+        when(this.mockProductMapper.fetchScalar(stubProduct.getId())).thenReturn(Optional.of(stubProduct));
 
-        //Configure ProductEntityMappable.fetchScalar(...)
-        final ProductEntity entity3 = new ProductEntity();
-        entity3.setId(1);
-        entity3.setName("name");
-        entity3.setPrice(0.0);
-        entity3.setStock(1);
-        entity3.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        when(mockProductMapper.fetchScalar(1)).thenReturn(entity3);
+        this.productServiceUnderTest.resumeProduct(stubProduct.getId());
+        verify(this.mockProductMapper, never()).resumeScalar(stubProduct.getId());
+    }
 
-        // Run the test
-        productServiceUnderTest.destock(entity, 1);
+    @ParameterizedTest
+    @ValueSource(ints = {1, 2, 3})
+    void testDestock_VariationLargerThanZero_UpdateStock(int decrement) {
+        final ProductEntity stubProduct = FakeEntities.FAKE_PRODUCT.duplicate();
+        when(this.mockProductMapper.fetchScalar(stubProduct.getId())).thenReturn(Optional.of(stubProduct));
 
-        // Verify the results
-        // Confirm ProductEntityMappable.updateStock(...).
-        final ProductEntity entity1 = new ProductEntity();
-        entity1.setId(1);
-        entity1.setName("name");
-        entity1.setPrice(0.0);
-        entity1.setStock(-2);
-        entity1.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        verify(mockProductMapper, Mockito.never()).updateStock(entity1);
+        this.productServiceUnderTest.destock(stubProduct.getId(), decrement);
+
+        verify(this.mockProductMapper).updateStock(stubProduct);
     }
 
     @Test
-    void testCountAllProducts() {
-        // Setup
-        final ProductEntity entity = new ProductEntity();
-        entity.setId(1);
-        entity.setName("name");
-        entity.setPrice(0.0);
-        entity.setStock(1);
-        entity.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
+    void testDestock_VariationEqualsZero_NotUpdateStock() {
+        final ProductEntity stubProduct = FakeEntities.FAKE_PRODUCT.duplicate();
+        when(this.mockProductMapper.fetchScalar(stubProduct.getId())).thenReturn(Optional.of(stubProduct));
 
-        //Configure ProductEntityMappable.fetchScalar(...)
-        when(mockProductMapper.countAll()).thenReturn(1);
+        this.productServiceUnderTest.destock(stubProduct.getId(), 0);
 
-        // Run the test
-        productServiceUnderTest.countAllProducts();
+        verify(this.mockProductMapper,never()).updateStock(stubProduct);
+    }
 
-        // Verify the results
-        // Confirm ProductEntityMappable.updateStock(...).
-        final ProductEntity entity1 = new ProductEntity();
-        entity1.setId(1);
-        entity1.setName("name");
-        entity1.setPrice(0.0);
-        entity1.setStock(1);
-        entity1.setCreatedAt(new GregorianCalendar(2020, Calendar.JANUARY, 1).getTime());
-        verify(mockProductMapper).countAll();
+    @ParameterizedTest(name = "{index}: {0}")
+    @ArgumentsSource(ProductInvalidStockingTestCase.InvalidDestockArgumentsProvider.class)
+    void testDestock_InvalidStockOrVariation_ThrowsIllegalArgumentException
+            (ProductInvalidStockingTestCase testCase) {
+        final ProductEntity stubProduct = FakeEntities.FAKE_PRODUCT.duplicate();
+        stubProduct.setStock(testCase.getStock());
+        when(this.mockProductMapper.fetchScalar(stubProduct.getId())).thenReturn(Optional.of(stubProduct));
+
+        assertThrowsExactly(testCase.getExceptionIssue().getExceptionClass(),
+                () -> this.productServiceUnderTest.destock(stubProduct.getId(), testCase.getVariation()),
+                testCase.getExceptionIssue().getMessage());
+
+        verify(this.mockProductMapper, never()).updateStock(stubProduct);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {1, 2, 3})
+    void testRestock_VariationLargerThanZero_UpdateStock(int increment) {
+        final ProductEntity stubProduct = FakeEntities.FAKE_PRODUCT.duplicate();
+        when(this.mockProductMapper.fetchScalar(stubProduct.getId())).thenReturn(Optional.of(stubProduct));
+
+        this.productServiceUnderTest.restock(stubProduct.getId(), increment);
+
+        verify(this.mockProductMapper).updateStock(stubProduct);
+    }
+
+    @Test
+    void testRestock_VariationEqualsZero_NotUpdateStock() {
+        final ProductEntity stubProduct = FakeEntities.FAKE_PRODUCT.duplicate();
+        when(this.mockProductMapper.fetchScalar(stubProduct.getId())).thenReturn(Optional.of(stubProduct));
+
+        this.productServiceUnderTest.restock(stubProduct.getId(), 0);
+
+        verify(this.mockProductMapper,never()).updateStock(stubProduct);
+    }
+
+    @ParameterizedTest(name = "{index}: {0}")
+    @ArgumentsSource(ProductInvalidStockingTestCase.InvalidRestockArgumentsProvider.class)
+    void testRestock_InvalidStockOrVariation_ThrowsIllegalArgumentException
+            (ProductInvalidStockingTestCase testCase) {
+        final ProductEntity stubProduct = FakeEntities.FAKE_PRODUCT.duplicate();
+        stubProduct.setStock(testCase.getStock());
+        when(this.mockProductMapper.fetchScalar(stubProduct.getId())).thenReturn(Optional.of(stubProduct));
+
+        assertThrowsExactly(testCase.getExceptionIssue().getExceptionClass(),
+                () -> this.productServiceUnderTest.restock(stubProduct.getId(), testCase.getVariation()),
+                testCase.getExceptionIssue().getMessage());
+
+        verify(this.mockProductMapper, never()).updateStock(stubProduct);
     }
 }

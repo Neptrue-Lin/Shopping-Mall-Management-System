@@ -7,7 +7,7 @@
 
         <RollingRandomAccessFile  name="RollingFile" fileName="logs/latest.log"
                      filePattern="classpath:logs/$${date:yyyy-MM}/%d{yyyy-MM-dd}-%i.log.gz">
-            <PatternLayout pattern="%highlight{[%date{HH:mm:ss.SSSS}] [%-4level | THREAD %threadId] %message%n%xEx}"/>
+            <PatternLayout pattern="%highlight{[%date{HH:mm:ss.SSS}] [%-4level | THREAD %threadId] %message%n%xEx}"/>
             <Policies>
                 <OnStartupTriggeringPolicy />
                 <TimeBasedTriggeringPolicy />

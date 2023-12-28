@@ -28,7 +28,7 @@ public class ProductController {
                                  @PathVariable("pageSize") Integer pageSize,
                                  HttpServletRequest request, HttpServletResponse response) throws IOException {
         response.setContentType("application/json");
-        response.getWriter().print(this.serializer.writeValueAsString(this.service.getLimitedProducts(pageIndex, pageSize)));
+        response.getWriter().print(this.serializer.writeValueAsString(this.service.getPagedProducts(pageIndex, pageSize)));
     }
 
     @GetMapping("/production/products/{pageSize}")
@@ -53,7 +53,7 @@ public class ProductController {
         ProductEntity entity = new ProductEntity();
         entity.setId(model.getId());
         entity.setCreatedBy(model.getRemovedBy());
-        this.service.removeProduct(entity);
+        this.service.removeProduct(entity.getId());
     }
 
     @PutMapping("/production/product/renew")
@@ -62,23 +62,18 @@ public class ProductController {
         ProductEntity entity = new ProductEntity();
         entity.setId(model.getId());
         entity.setCreatedBy(model.getRenewedBy());
-        this.service.resumeProduct(entity);
+        this.service.resumeProduct(entity.getId());
     }
 
     @PutMapping("/production/product/restock")
     public void restockProduct(@RequestBody ProductRestockingViewModel model,
                                HttpServletRequest request, HttpServletResponse response) {
-        ProductEntity entity = new ProductEntity();
-        entity.setId(model.getId());
-        this.service.restock(entity, model.getIncrement());
+        this.service.restock(model.getId(), model.getIncrement());
     }
 
     @PutMapping("/production/product/destock")
     public void destockProduct(@RequestBody ProductDestockingViewModel model,
                                HttpServletRequest request, HttpServletResponse response) {
-        ProductEntity entity = new ProductEntity();
-        entity.setId(model.getId());
-        entity.setLastModifiedBy(model.getDestockedBy());
-        this.service.destock(entity, model.getDecrement());
+        this.service.destock(model.getId(), model.getDecrement());
     }
 }

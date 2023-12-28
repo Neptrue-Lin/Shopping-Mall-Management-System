@@ -17,7 +17,7 @@
 		http://www.springframework.org/schema/jdbc/spring-jdbc.xsd">
 
     <bean id="configBean" class="org.springframework.context.support.PropertySourcesPlaceholderConfigurer">
-        <property name="location" value="classpath:db-connection.properties"/>
+        <property name="location" value="classpath:db-connection-test.properties"/>
     </bean>
 
     <!--Data Source-->
@@ -26,7 +26,7 @@
         <property name="url" value="${connection.url}"/>
 
         <property name="username" value="${connection.username}"/>
-        <property name="password" value="123456"/>
+        <property name="password" value="${connection.password}"/>
         <!--        <property name="password" value="${connection.password}"/>-->
         <!--        <property name="connectionProperties"-->
         <!--                  value="config.decrypt=true;-->
@@ -54,7 +54,7 @@
     </bean>
 
     <jdbc:initialize-database data-source="dataSource">
-        <jdbc:script location="classpath:db-schema.sql"/>
+        <jdbc:script location="classpath:database-schema-test.sql"/>
     </jdbc:initialize-database>
 
 
@@ -63,7 +63,7 @@
         <property name="dataSource" ref="dataSource"/>
         <property name="configLocation" value="classpath:mybatis-config.xml"/>
         <property name="mapperLocations"
-                  value="classpath:org/neptrueworks/ordermanagement/data/mapping/*Mappable.xml"/>
+                  value="classpath:org/neptrueworks/ordermanagement/data/mapping/ProductEntityMappable.xml"/>
     </bean>
 
     <bean id="sqlSession" class="org.mybatis.spring.SqlSessionTemplate">

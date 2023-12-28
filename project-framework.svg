@@ -121,7 +121,7 @@
 <rect x="46.05" y="136.49" class="st1" width="415.96" height="77.03"/>
 <rect x="46.05" y="228.85" class="st2" width="415.96" height="77.03"/>
 <rect x="476.92" y="44.12" class="st3" width="77.03" height="261.77"/>
-<text transform="matrix(1 0 0 1 160.5733 93.1653)" class="st4 st5 st6">Controller Layer</text>
+<text transform="matrix(1 0 0 1 194.5733 93.1653)" class="st4 st5 st6">Web Layer</text>
 <text transform="matrix(1 0 0 1 193.9625 183.2825)" class="st4 st5 st6">Core Layer</text>
 <text transform="matrix(1 0 0 1 195.3785 274.0628)" class="st4 st5 st6">Data Layer</text>
 <text transform="matrix(-1.608123e-16 1 -1 -1.608123e-16 509.5836 80.3232)" class="st4 st5 st6">Common Library</text>

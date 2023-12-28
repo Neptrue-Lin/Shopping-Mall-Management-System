@@ -19,8 +19,14 @@ public class OrderManifestEntity implements IDataAuditingEntitizable<Integer> {
     private String lastModifiedBy = "TEST";
     private boolean isDeleted = false;
 
+    @SneakyThrows
     @Override
-    public <TEntity extends IDataEntitizable<Integer>> boolean isIsotropic(TEntity entity) {
+    public OrderManifestEntity duplicate() {
+        return (OrderManifestEntity) this.clone();
+    }
+
+    @Override
+    public boolean isIsotropic(IDataEntitizable<Integer> entity) {
         if (entity == this) {
             return true;
         }

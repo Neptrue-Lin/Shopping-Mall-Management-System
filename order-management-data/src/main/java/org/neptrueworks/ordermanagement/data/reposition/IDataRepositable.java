@@ -12,6 +12,8 @@ public interface IDataRepositable<TIdentifier extends Comparable<TIdentifier>, T
 //    Design Pattern: Visitor
 //    Where GroupBy-Having OrderBy Join-On In Exists
 //    Aggregate functions
+//    Streamable<> Optional<>
+//    Functional Programming StreamAPI
 
 //    IDataConditionable<Entity> like(String , String condition);
 
