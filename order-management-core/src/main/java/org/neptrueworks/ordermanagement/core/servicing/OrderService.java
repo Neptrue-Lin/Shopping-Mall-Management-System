@@ -60,7 +60,7 @@ public class OrderService implements OrderServiceable {
     }
 
     @Override
-    public Iterable<OrderItemEntity> getOrderItems(int manifestId) {
+    public Iterable<OrderItemEntity> findOrderItems(int manifestId) {
         return this.itemMapper.findManifestItems(manifestId);
     }
 
@@ -87,6 +87,13 @@ public class OrderService implements OrderServiceable {
         return this.itemMapper.findItemByProductId(manifestId, productId);
     }
 
+    /**
+     * Create manifest for the order, and add the items to be ordered and attached to order manifest created.
+     * Then compute and update the gross amount for the manifest.
+     *
+     * @param orderManifest The order manifest needed to be placed.
+     * @param items The items to be ordered.
+     */
     @Override
     @Transactional
     public void placeOrder(OrderManifestEntity orderManifest, Iterable<OrderItemEntity> items) {
@@ -123,9 +130,16 @@ public class OrderService implements OrderServiceable {
         this.manifestMapper.resumeScalar(orderManifest.getId());
     }
 
+    /**
+     * Order the item and attach to the manifest to be placed.
+     *
+     * @param entity Item to be ordered.
+     * @throws IllegalArgumentException The quantity to be ordered is less than or equal to 0.
+     * @throws IllegalStateException    The quantity to be ordered exceeds the stock.
+     */
     @Override
     @SneakyThrows
-    public void orderItem(OrderItemEntity entity) {
+    public void orderItem(OrderItemEntity entity) throws IllegalArgumentException, IllegalStateException {
         int quantity = entity.getQuantity();
         ProductEntity product = this.productService.identifyProduct(entity.getProductId());
         if (quantity <= 0)

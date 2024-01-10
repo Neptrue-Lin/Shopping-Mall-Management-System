@@ -11,8 +11,14 @@ public class ExceptionCashier {
     private ExceptionCashier() {
     }
 
+    /**
+     * Create and the exception in the issue provided with inner exception and log the exception.
+     * @param issue Exception issue to be propagated.
+     * @param causeException The inner exception to the exception to be thrown.
+     * @return The wrapped exception to be thrown.
+     */
     @SneakyThrows
-    public Throwable checkout(IExceptionIssuable issue, Exception causeException) {
+    public Exception checkout(IExceptionIssuable issue, Exception causeException) {
         issue.setCauseException(causeException);
         Exception exception = issue.getExceptionClass().getDeclaredConstructor(String.class, Throwable.class)
                 .newInstance(issue.getMessage(), issue.getCauseException());
@@ -20,8 +26,13 @@ public class ExceptionCashier {
         return exception;
     }
 
+    /**
+     * Create and the exception in the issue provided and log the exception.
+     * @param issue Exception issue to be propagated.
+     * @return The exception to be thrown.
+     */
     @SneakyThrows
-    public Throwable checkout(IExceptionIssuable issue) {
+    public Exception checkout(IExceptionIssuable issue) {
         return this.checkout(issue, null);
     }
 }

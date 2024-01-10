@@ -1,23 +1,26 @@
 package org.neptrueworks.ordermanagement.data.mapping;
 
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.neptrueworks.ordermanagement.data.entitizing.OrderItemEntity;
+import org.neptrueworks.ordermanagement.data.maneuvering.IDataManipulable;
 import org.neptrueworks.ordermanagement.data.maneuvering.IDataMappable;
-import org.neptrueworks.ordermanagement.data.maneuvering.IDataOperable;
 import org.neptrueworks.ordermanagement.data.maneuvering.IDataRemovable;
-import org.neptrueworks.ordermanagement.data.reposition.DataSeekSpecification;
-import org.neptrueworks.ordermanagement.data.reposition.DataSortLevel;
-import org.neptrueworks.ordermanagement.data.reposition.IDataCountable;
-import org.neptrueworks.ordermanagement.data.reposition.IDataPageable;
+import org.neptrueworks.ordermanagement.data.reposition.*;
 
+import java.util.List;
 import java.util.Optional;
 
 @Mapper
-public interface OrderItemEntityMappable
-        extends IDataMappable, IDataOperable<OrderItemEntity, Integer>, IDataRemovable<OrderItemEntity, Integer>,
-        IDataPageable<OrderItemEntity, Integer>, IDataCountable<OrderItemEntity, Integer> {
-    Iterable<OrderItemEntity> findManifestItems(Integer manifestId);
-    Iterable<OrderItemEntity> sortManifestItems(Integer manifestId, DataSortLevel level);
-    Iterable<OrderItemEntity> lookupItemsByProductId(Integer productId, DataSeekSpecification keyset);
-    Optional<OrderItemEntity> findItemByProductId(Integer manifestId, Integer productId);
+public interface OrderItemEntityMappable extends IDataMappable, IDataRemovable<OrderItemEntity, Integer>,
+        IDataPageable<OrderItemEntity, Integer>, IDataCountable<OrderItemEntity, Integer>,
+        IDataQueryable<OrderItemEntity, Integer>, IDataManipulable<OrderItemEntity, Integer> {
+    List<OrderItemEntity> findManifestItems(@Param("manifestId") Integer manifestId);
+
+    List<OrderItemEntity> sortManifestItems(@Param("manifestId") Integer manifestId, @Param("level") DataSortLevel level);
+
+    List<OrderItemEntity> lookupItemsByProductId(@Param("productId") Integer productId, @Param("keyset") DataSeekSpecification keyset,
+                                                 @Param("level") DataSortLevel level);
+
+    Optional<OrderItemEntity> findItemByProductId(@Param("manifestId") Integer manifestId, @Param("productId") Integer productId);
 }

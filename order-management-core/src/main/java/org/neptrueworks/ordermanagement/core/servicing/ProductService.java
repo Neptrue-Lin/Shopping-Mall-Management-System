@@ -36,7 +36,7 @@ public class ProductService implements ProductServiceable {
 
     @Override
     @SneakyThrows
-    public ProductEntity identifyProduct(int id) {
+    public ProductEntity identifyProduct(int id) throws IllegalStateException {
         Optional<ProductEntity> product = this.productMapper.fetchScalar(id);
         if (product.isEmpty())
             throw ExceptionCashier.DEFAULT.checkout(ServiceExceptionIssue.PRODUCT_NONEXISTENT);
@@ -44,7 +44,12 @@ public class ProductService implements ProductServiceable {
     }
 
     @Override
-    public void addProduct(ProductEntity product) {
+    @SneakyThrows
+    public void addProduct(ProductEntity product) throws IllegalStateException {
+        if (product.getStock() < 0)
+            throw ExceptionCashier.DEFAULT.checkout(ServiceExceptionIssue.OUT_OF_STOCK);
+        if (product.getPrice() < 0.0)
+            throw ExceptionCashier.DEFAULT.checkout(ServiceExceptionIssue.PRICE_LOWER_THAN_ZERO);
         this.productMapper.add(product);
     }
 
@@ -67,14 +72,12 @@ public class ProductService implements ProductServiceable {
 
     @Override
     @SneakyThrows
-    public void restock(int id, int increment) {
+    public void restock(int id, int increment) throws IllegalStateException, IllegalArgumentException {
         ProductEntity entity = this.identifyProduct(id);
         if (increment == 0)
             return;
         else if (increment < 0)
             throw ExceptionCashier.DEFAULT.checkout(ServiceExceptionIssue.VARIATION_LESS_THAN_ZERO);
-        else if (entity.getStock() < 0)
-            throw ExceptionCashier.DEFAULT.checkout(ServiceExceptionIssue.OUT_OF_STOCK);
 
         entity.setStock(entity.getStock() + increment);
         this.productMapper.updateStock(entity);
@@ -82,7 +85,7 @@ public class ProductService implements ProductServiceable {
 
     @Override
     @SneakyThrows
-    public void destock(int id, int decrement) {
+    public void destock(int id, int decrement) throws IllegalStateException, IllegalArgumentException {
         ProductEntity entity = this.identifyProduct(id);
         if (decrement == 0)
             return;

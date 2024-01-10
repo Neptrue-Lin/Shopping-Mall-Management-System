@@ -4,8 +4,7 @@ import org.neptrueworks.ordermanagement.data.entitizing.OrderItemEntity;
 import org.neptrueworks.ordermanagement.data.entitizing.OrderManifestEntity;
 import org.neptrueworks.ordermanagement.data.entitizing.ProductEntity;
 
-import java.sql.Date;
-import java.time.LocalDate;
+import java.util.Date;
 import java.util.concurrent.ThreadLocalRandom;
 
 public record FakeEntities() {
@@ -13,9 +12,9 @@ public record FakeEntities() {
     private static final Integer ORDER_MANIFEST_IDENTIFIER = ThreadLocalRandom.current().nextInt(1, Integer.MAX_VALUE);
     private static final Integer ORDER_ITEM_IDENTIFIER = ThreadLocalRandom.current().nextInt(1, Integer.MAX_VALUE);
 
-    private static final Date CREATED_AT = Date.valueOf(LocalDate.now());
-    private static final Date LAST_MODIFIED_AT = Date.valueOf(LocalDate.now());
-    private static final Date PAID_AT = Date.valueOf(LocalDate.now());
+    private static final Date CREATED_AT = new Date(System.currentTimeMillis());
+    private static final Date LAST_MODIFIED_AT = new Date(System.currentTimeMillis());
+    private static final Date PAID_AT = new Date(System.currentTimeMillis());
 
     private static final String CREATED_BY = "TEST";
     private static final String LAST_MODIFIED_BY = "TEST";

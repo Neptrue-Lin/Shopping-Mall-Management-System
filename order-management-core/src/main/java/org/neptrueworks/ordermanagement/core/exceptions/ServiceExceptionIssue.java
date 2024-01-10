@@ -8,6 +8,7 @@ public enum ServiceExceptionIssue implements IExceptionIssuable {
     QUANTITY_NOT_GREATER_THAN_ZERO(IllegalArgumentException.class, "Quantity could not be less than or equal to 0.", null),
     PRODUCT_NONEXISTENT(IllegalStateException.class, "Product does not exist.", null),
     OUT_OF_STOCK(IllegalArgumentException.class, "Out of stock.", null),
+    PRICE_LOWER_THAN_ZERO(IllegalArgumentException.class, "Price could not be lower than 0.", null),
     VARIATION_LESS_THAN_ZERO(IllegalArgumentException.class, "Variation should not be less than 0.", null),
     ORDER_MANIFEST_NOT_FOUND(IllegalStateException.class, "Order manifest was not found.", null),
     ORDER_ITEM_NOT_FOUND(IllegalStateException.class, "Order item was not found.", null);

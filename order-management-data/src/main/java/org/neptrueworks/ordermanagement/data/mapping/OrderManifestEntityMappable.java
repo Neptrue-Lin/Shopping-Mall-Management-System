@@ -1,23 +1,21 @@
 package org.neptrueworks.ordermanagement.data.mapping;
 
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.neptrueworks.ordermanagement.data.entitizing.OrderItemEntity;
 import org.neptrueworks.ordermanagement.data.entitizing.OrderManifestEntity;
+import org.neptrueworks.ordermanagement.data.maneuvering.IDataManipulable;
 import org.neptrueworks.ordermanagement.data.maneuvering.IDataMappable;
-import org.neptrueworks.ordermanagement.data.maneuvering.IDataOperable;
 import org.neptrueworks.ordermanagement.data.maneuvering.IDataRemovable;
-import org.neptrueworks.ordermanagement.data.reposition.DataSeekSpecification;
-import org.neptrueworks.ordermanagement.data.reposition.DataSortLevel;
-import org.neptrueworks.ordermanagement.data.reposition.IDataCountable;
-import org.neptrueworks.ordermanagement.data.reposition.IDataPageable;
+import org.neptrueworks.ordermanagement.data.reposition.*;
 
-import java.util.Map;
+import java.util.List;
 
 @Mapper
-public interface OrderManifestEntityMappable
-        extends IDataMappable, IDataOperable<OrderManifestEntity, Integer>, IDataRemovable<OrderManifestEntity, Integer>,
-        IDataPageable<OrderManifestEntity, Integer>, IDataCountable<OrderManifestEntity, Integer> {
-    Iterable<OrderManifestEntity> fetch(Map<String, Object> conditions);
-    Iterable<OrderItemEntity> sortManifests(DataSortLevel level, DataSeekSpecification keyset);
+public interface OrderManifestEntityMappable extends IDataMappable, IDataRemovable<OrderManifestEntity, Integer>,
+        IDataPageable<OrderManifestEntity, Integer>, IDataCountable<OrderManifestEntity, Integer>,
+        IDataQueryable<OrderManifestEntity, Integer>, IDataManipulable<OrderManifestEntity, Integer> {
+    List<OrderItemEntity> sortManifests(@Param("level") DataSortLevel level, @Param("keyset") DataSeekSpecification keyset);
+
     void updateGrossAmount(OrderManifestEntity orderManifest);
 }

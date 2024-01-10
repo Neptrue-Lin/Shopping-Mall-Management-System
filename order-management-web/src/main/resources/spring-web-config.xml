@@ -31,9 +31,5 @@
 
     <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
         <property name="prefix" value="/"/>
-        <property name="suffix" value=".jsp"/>
     </bean>
-
-    <bean id="serializer" class="com.fasterxml.jackson.databind.ObjectMapper" scope="singleton"/>
-
 </beans>

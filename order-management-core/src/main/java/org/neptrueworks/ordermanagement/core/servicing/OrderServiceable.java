@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
-@Service
 public interface OrderServiceable extends IServiceable {
     void placeOrder(OrderManifestEntity orderManifest, Iterable<OrderItemEntity> items);
 
@@ -32,7 +31,7 @@ public interface OrderServiceable extends IServiceable {
 
     Optional<OrderItemEntity> identifyOrderItemByProductId(int manifestId, int productId);
 
-    Iterable<OrderItemEntity> getOrderItems(int manifestId);
+    Iterable<OrderItemEntity> findOrderItems(int manifestId);
 
     OrderManifestEntity identifyOrderManifest(int manifestId);
 

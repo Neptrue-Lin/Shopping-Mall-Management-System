@@ -81,6 +81,11 @@
             <tx:method name="fetch*" read-only="true"/>
             <tx:method name="select*" read-only="true"/>
             <tx:method name="get*" read-only="true"/>
+            <tx:method name="find*" read-only="true"/>
+            <tx:method name="lookup*" read-only="true"/>
+            <tx:method name="filter*" read-only="true"/>
+            <tx:method name="seek*" read-only="true"/>
+            <tx:method name="take*" read-only="true"/>
             <tx:method name="*" propagation="REQUIRED"/>
         </tx:attributes>
     </tx:advice>
